@@ -11,7 +11,7 @@ __pycache__/
 *.sqlite3-journal
 
 gefundene_iocs*/
-
+settings.json
 *.log
 
 .DS_Store # macOS
