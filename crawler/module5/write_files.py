@@ -11,11 +11,10 @@ def _sanitize_filename(name_part, max_length=100):
     Ersetzt problematische Zeichen und kürzt ihn bei Bedarf.
     """
     if not isinstance(name_part, str):
-        name_part = str(name_part)  # Sicherstellen, dass es ein String ist
+        name_part = str(name_part)
 
-    # Spezifische Ersetzungen für häufige problematische Zeichen in IOC-Werten
-    name_part = name_part.replace("://", "_protocol_")  # z.B. http_protocol_
-    name_part = name_part.replace(":", "_colon_")  # Für IPv6 oder Ports
+    name_part = name_part.replace("://", "_protocol_")
+    name_part = name_part.replace(":", "_colon_")
     name_part = name_part.replace("/", "_slash_")
     name_part = name_part.replace("\\", "_backslash_")
     name_part = name_part.replace("*", "_star_")
@@ -25,29 +24,20 @@ def _sanitize_filename(name_part, max_length=100):
     name_part = name_part.replace("|", "_pipe_")
     name_part = name_part.replace("\"", "_quote_")
 
-    # Ersetze alle verbleibenden nicht-alphanumerischen Zeichen (außer Punkt, Bindestrich, Unterstrich)
-    # durch einen Unterstrich. \w beinhaltet alphanumerische Zeichen und den Unterstrich.
+
     name_part = re.sub(r'[^\w.-]', '_', name_part)
 
-    # Mehrfache Unterstriche durch einen einzelnen ersetzen
     name_part = re.sub(r'_+', '_', name_part)
 
-    # Führende/nachfolgende Unterstriche oder Punkte entfernen
     name_part = name_part.strip('._')
 
-    # Auf maximale Länge kürzen, um extrem lange Dateinamen zu vermeiden
     if len(name_part) > max_length:
-        # Nimm einen Hash der ursprünglichen Zeichenkette, um Einzigartigkeit bei Kürzung zu erhöhen
-        # Dies ist optional, aber hilfreich bei sehr ähnlichen langen Namen.
-        # Für den Moment halten wir es einfacher und kürzen nur.
-        # import hashlib
-        # hash_suffix = hashlib.md5(original_name_part.encode('utf-8')).hexdigest()[:6]
-        # name_part = name_part[:max_length - len(hash_suffix) -1] + "_" + hash_suffix
+
         name_part = name_part[:max_length]
         name_part = name_part.strip(
-            '._')  # Erneut bereinigen, falls Kürzung einen Punkt/Unterstrich am Ende hinterlässt
+            '._')
 
-    if not name_part:  # Falls nach der Bereinigung nichts übrig bleibt
+    if not name_part:
         return "default_ioc_name"
 
     return name_part
@@ -64,12 +54,10 @@ def save_iocs_to_json_files(structured_iocs_list, output_directory):
     """
     if not structured_iocs_list:
         print("[Module 5] Keine strukturierten IOCs zum Speichern erhalten.")
-        return 0  # Anzahl der gespeicherten Dateien
+        return 0
 
-    # Erstelle das Ausgabeverzeichnis, falls es nicht existiert
     try:
         os.makedirs(output_directory, exist_ok=True)
-        # os.path.abspath gibt den vollständigen Pfad aus, was für die Log-Nachricht gut ist
         print(f"[Module 5] JSON-Dateien werden im Verzeichnis gespeichert: {os.path.abspath(output_directory)}")
     except OSError as e:
         print(
@@ -79,16 +67,10 @@ def save_iocs_to_json_files(structured_iocs_list, output_directory):
     files_saved_count = 0
     for ioc_record in structured_iocs_list:
         ioc_type = ioc_record.get('ioc_type', 'unknown_type')
-        # Der ioc_value wurde in Modul 4 bereits normalisiert (z.B. Kleinschreibung für Domains)
         ioc_value = ioc_record.get('ioc_value', 'unknown_value')
 
-        # Erstelle einen bereinigten Dateinamen
         sanitized_value_for_filename = _sanitize_filename(ioc_value)
 
-        # Dateiname: typ_bereinigterwert.json
-        # Da die ioc_records von Modul 4 bereits eindeutig sind (basierend auf normalisiertem Wert und Typ),
-        # sollten die Dateinamen auch eindeutig sein, solange die Sanitisierung nicht zu Kollisionen führt.
-        # Bei sehr langen oder komplexen Werten könnte man einen Hash-Suffix hinzufügen, aber das ist erstmal nicht nötig.
         json_filename = f"{ioc_type}_{sanitized_value_for_filename}.json"
         full_filepath = os.path.join(output_directory, json_filename)
 
@@ -115,7 +97,7 @@ def save_iocs_to_json_files(structured_iocs_list, output_directory):
     return files_saved_count
 
 # -------------------------------------------------------------------
-# NEUE FUNKTION: CSV-Ausgabe
+# CSV-Ausgabe
 # -------------------------------------------------------------------
 def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summary.csv"):
     """
@@ -154,18 +136,14 @@ def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summ
             writer.writeheader()  # Schreibt die Kopfzeile
 
             for ioc_record in structured_iocs_list:
-                # Konvertiere Listen in durch Trennzeichen getrennte Strings für die CSV-Darstellung
                 source_urls_str = "|".join(ioc_record.get("source_article_urls", []))
 
-                # Entferne Zeilenumbrüche aus dem Kontext-Snippet
                 context_str = ioc_record.get("first_seen_context_snippet", "").replace('\n', ' ').replace('\r', '')
 
-                # Extrahiere die 'value'-Werte aus den assoziierten Listen
                 cves_str = ";".join([cve['value'] for cve in ioc_record.get("associated_cves", [])])
                 countries_str = ";".join([country['value'] for country in ioc_record.get("associated_countries", [])])
                 apts_str = ";".join([apt['value'] for apt in ioc_record.get("associated_apts", [])])
 
-                # Extrahiere die normalisierten APT-Werte
                 normalized_apts_str = ";".join(
                     [apt.get('normalized_value', apt['value']) for apt in ioc_record.get("associated_apts", [])]
                 )
@@ -196,10 +174,9 @@ def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summ
 
 
 # -------------------------------------------------------------------
-# NEUE FUNKTION: STIX-Ausgabe
+# STIX-Ausgabe
 # -------------------------------------------------------------------
 
-# Einfaches Mapping von Ländernamen zu ISO 3166-1 Alpha-2 Codes für STIX
 COUNTRY_TO_ISO_CODE_MAP = {
     "russia": "RU", "russian federation": "RU",
     "china": "CN", "people's republic of china": "CN",
@@ -207,7 +184,6 @@ COUNTRY_TO_ISO_CODE_MAP = {
     "north korea": "KP", "dprk": "KP",
     "united states": "US", "usa": "US",
     "germany": "DE",
-    # Diese Liste kann erweitert werden
 }
 
 
@@ -224,7 +200,6 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
         print("[Module 5] STIX: Keine strukturierten IOCs zum Speichern erhalten.")
         return 0
 
-    # Erstelle das Ausgabeverzeichnis, falls es nicht existiert
     try:
         os.makedirs(output_directory, exist_ok=True)
     except OSError as e:
@@ -234,8 +209,6 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
     filepath = os.path.join(output_directory, filename)
     print(f"[Module 5] STIX Bundle wird erstellt: {os.path.abspath(filepath)}")
 
-    # Dictionaries, um bereits erstellte STIX-Objekte zu speichern und Duplikate zu vermeiden
-    # Schlüssel ist eine repräsentative Eigenschaft (z.B. URL, Name), Wert ist das STIX-Objekt.
     created_reports = {}
     created_apts = {}
     created_locations = {}
@@ -243,7 +216,6 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
     all_stix_objects = []
 
     for ioc_record in structured_iocs_list:
-        # 1. Erstelle das primäre STIX Cyber-observable Object (SCO)
         primary_sco = None
         ioc_type = ioc_record["ioc_type"]
         ioc_value = ioc_record["ioc_value"]
@@ -260,12 +232,10 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
             primary_sco = stix2.File(name=ioc_value)
 
         if not primary_sco:
-            continue  # Überspringe IOC-Typen, die wir nicht zu STIX mappen können
+            continue
 
         all_stix_objects.append(primary_sco)
 
-        # 2. Erstelle STIX Domain Objects (SDOs) für assoziierte Erwähnungen
-        # APTs -> IntrusionSet
         apts = []
         for apt_info in ioc_record.get("associated_apts", []):
             norm_name = apt_info["normalized_value"]
@@ -274,7 +244,6 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
                 all_stix_objects.append(created_apts[norm_name])
             apts.append(created_apts[norm_name])
 
-        # CVEs -> Vulnerability
         vulnerabilities = []
         for cve_info in ioc_record.get("associated_cves", []):
             cve_name = cve_info["value"].upper()
@@ -283,7 +252,6 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
                 all_stix_objects.append(created_vulnerabilities[cve_name])
             vulnerabilities.append(created_vulnerabilities[cve_name])
 
-        # Countries -> Location
         locations = []
         for country_info in ioc_record.get("associated_countries", []):
             country_name = country_info["value"].lower()
@@ -294,21 +262,16 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
             if iso_code:
                 locations.append(created_locations[iso_code])
 
-        # 3. Erstelle STIX Relationship Objects (SROs)
         for apt_sdo in apts:
-            # APT uses IOC: IntrusionSet -> uses -> File/Domain/IP
             rel = stix2.Relationship(apt_sdo, "uses", primary_sco)
             all_stix_objects.append(rel)
-            # APT targets Vulnerability: IntrusionSet -> targets -> Vulnerability
             for vuln_sdo in vulnerabilities:
                 rel_vuln = stix2.Relationship(apt_sdo, "targets", vuln_sdo)
                 all_stix_objects.append(rel_vuln)
-            # APT originates-from Location: IntrusionSet -> originates-from -> Location
             for loc_sdo in locations:
                 rel_loc = stix2.Relationship(apt_sdo, "originates-from", loc_sdo)
                 all_stix_objects.append(rel_loc)
 
-        # 4. Erstelle Report-Objekte für die Quell-URLs
         for url in ioc_record.get("source_article_urls", []):
             if url not in created_reports:
                 report_desc = f"Threat intelligence report sourced from the article at {url}."
@@ -322,11 +285,9 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
                 )
                 all_stix_objects.append(created_reports[url])
             else:
-                # Füge die Referenz zum bestehenden Report hinzu, wenn er schon existiert
                 if primary_sco.id not in created_reports[url].object_refs:
                     created_reports[url].object_refs.append(primary_sco.id)
 
-    # 5. Erstelle das finale STIX Bundle
     try:
         bundle = stix2.Bundle(all_stix_objects, spec_version="2.1", allow_custom=True)
         with open(filepath, "w", encoding="utf-8") as f:
