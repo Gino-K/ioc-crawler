@@ -64,7 +64,6 @@ class TestPreloadMitreApts(unittest.TestCase):
         """Testet das erfolgreiche Scrapen und Speichern der APT-Gruppen."""
         print("\n[TEST] test_scrape_and_load_apts")
 
-        # Mock für den Web-Request
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.content = SAMPLE_HTML.encode('utf-8')
@@ -76,12 +75,10 @@ class TestPreloadMitreApts(unittest.TestCase):
 
         preload_mitre_apts.scrape_and_load_apts()
 
-        # Überprüfe den Inhalt der Test-DB
         session = self.TestingSessionLocal()
         apt_count = session.query(APT).count()
         self.assertEqual(apt_count, 2)
 
-        # Überprüfe einen Eintrag im Detail
         apt_ajax = session.query(APT).filter_by(mitre_id="G0130").one()
         self.assertEqual(apt_ajax.name, "Ajax Security Team")
         self.assertEqual(apt_ajax.aliases, "Rocket Kitten, Flying Kitten")
@@ -91,19 +88,15 @@ class TestPreloadMitreApts(unittest.TestCase):
 
         # ----- Teste das Update-Szenario -----
         print("[TEST] test_scrape_and_load_apts (Update-Szenario)")
-        # Konfiguriere den Web-Request-Mock neu, um die Update-HTML zurückzugeben
         mock_response.content = SAMPLE_HTML_UPDATE.encode('utf-8')
         mock_requests_get.return_value = mock_response
 
         preload_mitre_apts.scrape_and_load_apts()
 
-        # Überprüfe erneut die DB
         session = self.TestingSessionLocal()
-        # Es sollten immer noch nur 2 Einträge sein (keine Duplikate)
         apt_count_after_update = session.query(APT).count()
         self.assertEqual(apt_count_after_update, 2)
 
-        # Überprüfe, ob der Eintrag für G0130 aktualisiert wurde
         apt_ajax_updated = session.query(APT).filter_by(mitre_id="G0130").one()
         self.assertEqual(apt_ajax_updated.aliases, "Rocket Kitten, Flying Kitten, Operation Saffron Rose")
         self.assertEqual(apt_ajax_updated.description, "This is an updated description.")

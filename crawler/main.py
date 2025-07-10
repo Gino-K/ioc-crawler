@@ -224,7 +224,12 @@ def main():
     if annotated_primary_iocs:
         print(
             f"\n[Main] Übergebe {len(annotated_primary_iocs)} annotierte primäre IOCs an Modul 4 zur Strukturierung...")
-        structured_iocs = enrichment.process_and_structure_iocs(annotated_primary_iocs, unique_global_links)
+
+        structured_iocs = enrichment.process_and_structure_iocs(
+            annotated_primary_iocs,
+            unique_global_links,
+            db_handler
+        )
 
         print(f"\n[Main] Modul 4 Zusammenfassung: {len(structured_iocs)} einzigartige, strukturierte IOCs erstellt.")
         print("\n[Main] Beispielhafte strukturierte IOCs (max. erste 5):")

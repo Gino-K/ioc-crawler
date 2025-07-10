@@ -1,4 +1,6 @@
 import datetime
+from pathlib import Path
+
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, func, or_
 from .database_models import Base, IOC, Sighting, APT, Country, CVE
@@ -6,8 +8,33 @@ from .database_models import Base, IOC, Sighting, APT, Country, CVE
 
 class DatabaseHandler:
     def __init__(self, db_name="threat_intelligence.sqlite"):
-        """Initialisiert die Datenbankverbindung und erstellt die Session."""
-        self.engine = create_engine(f'sqlite:///{db_name}')
+        """
+        Initialisiert die Datenbankverbindung. Erkennt, ob eine In-Memory-DB
+        oder eine dateibasierte DB verwendet werden soll.
+        """
+
+        def find_project_root(start_path):
+            current_path = Path(start_path).resolve()
+            while not (current_path / '.gitignore').exists():
+                if current_path.parent == current_path: return None
+                current_path = current_path.parent
+            return current_path
+
+        if db_name == ":memory:":
+            db_connection_string = 'sqlite:///:memory:'
+            print("[DB Handler] Erstelle eine In-Memory-Test-Datenbank.")
+        else:
+            project_root = find_project_root(__file__)
+            if not project_root:
+                print(
+                    "[DB Handler] WARNUNG: .gitignore nicht gefunden. DB wird im aktuellen Arbeitsverzeichnis erstellt.")
+                project_root = Path.cwd()
+
+            db_path = project_root / db_name
+            db_connection_string = f'sqlite:///{db_path}'
+            print(f"[DB Handler] Verbinde zur zentralen Datenbank: {db_path}")
+
+        self.engine = create_engine(db_connection_string)
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
 
