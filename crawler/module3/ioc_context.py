@@ -75,7 +75,6 @@ def load_and_compile_apt_regex(db_handler: DatabaseHandler):
                 # Mappe auch die Variation auf den Hauptnamen
                 temp_name_map[variation_with_space.lower()] = main_name
 
-            # Verarbeite die offiziellen Aliase aus der Datenbank
             if apt.aliases:
                 aliases = [alias.strip() for alias in apt.aliases.split(',')]
                 for alias in aliases:
@@ -83,7 +82,6 @@ def load_and_compile_apt_regex(db_handler: DatabaseHandler):
                         all_names_to_search.add(alias)
                         temp_name_map[alias.lower()] = main_name
 
-        # Sortiere die finale Liste nach Länge für eine robuste Regex
         sorted_unique_names = sorted(list(all_names_to_search), key=len, reverse=True)
 
         apt_pattern = r'\b(?:' + '|'.join(re.escape(name) for name in sorted_unique_names) + r')\b'
@@ -163,25 +161,20 @@ def _extract_iocs_with_regex(text, ioc_type, regex, article_index, context_windo
             # Überspringe, wenn es wahrscheinlich eine Dateiendung ist
             if raw_ioc.lower().endswith(COMMON_FILE_EXTENSIONS):
                 continue
-            # Überspringe, wenn es nicht mindestens einen Punkt enthält oder zu kurz ist
-            if '.' not in raw_ioc or len(raw_ioc) < 4:  # z.B. "a.b" ist zu kurz
+            if '.' not in raw_ioc or len(raw_ioc) < 4:
                 continue
-            # Überspringe, wenn es mit "http" oder "https" beginnt (dies sollte idealerweise als URL klassifiziert werden,
-            # aber unsere Domain-Regex ist gierig. Hier eine einfache Korrektur)
             if raw_ioc.lower().startswith(("http://", "https://", "hxxp://", "hxxps://")):
-                # Versuche, nur den Hostnamen zu extrahieren, wenn möglich
                 try:
                     parsed_hostname = re.match(r'^(?:hxxps?|https?)://([^/\s]+)', raw_ioc.lower(), re.IGNORECASE)
                     if parsed_hostname:
                         raw_ioc = parsed_hostname.group(1)
-                    else:  # Wenn es nicht dem URL-Muster mit Host entspricht, überspringen
+                    else:
                         continue
-                except Exception:  # Bei Fehlern im Parsing überspringen
+                except Exception:
                     continue
 
         refanged_ioc = refang_ioc(raw_ioc, ioc_type)
 
-        # Zusätzliche Validierung nach dem Refanging (Beispiel für IPv4)
         if ioc_type == "ipv4":
             octets = refanged_ioc.split('.')
             if len(octets) == 4:
@@ -191,19 +184,18 @@ def _extract_iocs_with_regex(text, ioc_type, regex, article_index, context_windo
                         valid_octets = False
                         break
                 if not valid_octets:
-                    continue  # Ungültige IP-Adresse (z.B. 999.1.1.1)
-            else:  # Nicht das Format x.x.x.x
+                    continue
+            else:
                 continue
 
-        # Kontext-Snippet erstellen
         start_index = max(0, match.start() - context_window)
         end_index = min(len(text), match.end() + context_window)
-        snippet = text[start_index:end_index].replace("\n", " ")  # Newlines im Snippet ersetzen
+        snippet = text[start_index:end_index].replace("\n", " ")
 
         ioc_entry = {
             "ioc_value": refanged_ioc,
             "ioc_type": ioc_type,
-            "source_article_index": article_index,  # Index des Artikels in der Ursprungsliste
+            "source_article_index": article_index,
             "context_snippet": f"...{snippet}..."
         }
         found_iocs_list.append(ioc_entry)
@@ -227,7 +219,6 @@ def extract_iocs_from_text(text_content, article_idx):
 
     # 2. APT-Gruppen-Erwähnungen
     for match in COMPILED_APT_REGEX.finditer(text_content):
-        # Der im Text gefundene Name/Alias (z.B. "Fancy Bear")
         matched_text = match.group(0)
         normalized_name = APT_NAME_MAP.get(matched_text.lower(), matched_text)
 
@@ -329,7 +320,7 @@ def process_text_contents(article_texts_list):
 
                 # Füge assoziierte Erwähnungen hinzu, falls vorhanden
                 for key, mentions_list in current_mentions_by_type.items():
-                    if mentions_list:  # Nur hinzufügen, wenn die Liste nicht leer ist
+                    if mentions_list:
                         annotated_ioc[key] = mentions_list
 
                 master_annotated_ioc_list.append(annotated_ioc)

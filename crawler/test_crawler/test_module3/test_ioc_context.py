@@ -148,7 +148,6 @@ class Testioc_contextExtractIOCsFromText(unittest.TestCase):
         Initialisiert die Regex-Variablen, damit der Test nicht fehlschlägt.
         """
         print("\n[Test] Führe test_context_snippet aus...")
-        # Initialisiere die globalen Variablen mit "niemals-matchenden" Regexes für diesen isolierten Test
         ioc_context.COMPILED_APT_REGEX = re.compile(r'a^')
         ioc_context.COMPILED_COUNTRY_REGEX = re.compile(r'a^')
 
@@ -166,15 +165,12 @@ class Testioc_contextExtractIOCsFromText(unittest.TestCase):
         """
         print("\n[Test] Führe test_empty_db_leads_to_no_mentions aus...")
 
-        # 1. Konfiguriere den Mock, um eine leere Liste zurückzugeben
         mock_db_handler_instance = mock_db_handler_class.return_value
         mock_db_handler_instance.Session().__enter__().query().all.return_value = []
 
-        # 2. Rufe die ECHTEN Ladefunktionen auf
         ioc_context.load_and_compile_apt_regex(mock_db_handler_instance)
         ioc_context.load_and_compile_country_regex(mock_db_handler_instance)
 
-        # 3. Führe den Test aus
         text = "This text mentions Russia and APT28 but the DB is empty, so nothing should be found."
         iocs = ioc_context.extract_iocs_from_text(text, 0)
 

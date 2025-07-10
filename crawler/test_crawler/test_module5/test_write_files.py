@@ -1,7 +1,7 @@
 import unittest
 import os
-import shutil  # Zum robusten Löschen von Verzeichnissen
-import tempfile  # Zum Erstellen von temporären Verzeichnissen
+import shutil
+import tempfile
 import json
 import csv
 from crawler.module5 import write_files
@@ -19,16 +19,13 @@ class TestModule5OutputFunctions(unittest.TestCase):
         Erstellt ein temporäres Verzeichnis und Testdaten.
         """
         print(f"\n--- Setting up for {self._testMethodName} ---")
-        # 1. Erstelle ein temporäres Hauptverzeichnis für alle Testausgaben
         self.test_dir = tempfile.mkdtemp()
         print(f"Temporäres Testverzeichnis erstellt: {self.test_dir}")
 
-        # 2. Definiere die spezifischen Ausgabeverzeichnisse basierend auf der User-Anfrage
         self.json_output_dir = os.path.join(self.test_dir, "test_gefundene_iocs_json")
         self.csv_output_dir = os.path.join(self.test_dir, "test_gefundene_iocs_csv")
         self.stix_output_dir = os.path.join(self.test_dir, "test_gefundene_iocs_stix")
 
-        # 3. Erstelle Beispieldaten, wie sie von Modul 4 kommen würden
         self.sample_structured_iocs = [
             {
                 "ioc_value": "evil.com",
@@ -100,14 +97,12 @@ class TestModule5OutputFunctions(unittest.TestCase):
         expected_filepath = os.path.join(self.csv_output_dir, csv_filename)
         self.assertTrue(os.path.isfile(expected_filepath))
 
-        # Lese die CSV-Datei zurück und überprüfe den Inhalt
         with open(expected_filepath, 'r', newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             rows = list(reader)
 
             self.assertEqual(len(rows), len(self.sample_structured_iocs))
 
-            # Prüfe den Inhalt einer bestimmten Zeile (z.B. die für 192.168.1.101)
             row_for_ip = next(row for row in rows if row["ioc_value"] == "192.168.1.101")
             self.assertIsNotNone(row_for_ip)
             self.assertEqual(row_for_ip["ioc_type"], "ipv4")

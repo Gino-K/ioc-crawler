@@ -53,7 +53,7 @@ class Sighting(Base):
     context_snippet = Column(Text)
     # Zeitstempel dieses spezifischen Funds (aus Modul 4)
     sighting_timestamp = Column(DateTime, nullable=False)
-    saved_formats = Column(String)  # z.B. "json,csv,stix"
+    saved_formats = Column(String)
 
     #keys
     country_id = Column(Integer, ForeignKey('countries.id'))

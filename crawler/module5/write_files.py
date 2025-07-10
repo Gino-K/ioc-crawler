@@ -76,17 +76,11 @@ def save_iocs_to_json_files(structured_iocs_list, output_directory):
 
         try:
             with open(full_filepath, 'w', encoding='utf-8') as f:
-                # json.dump schreibt das Dictionary hübsch formatiert in die Datei
-                # indent=4 für Lesbarkeit, ensure_ascii=False für korrekte UTF-8-Zeichen
-                json.dump(ioc_record, f, indent=4, ensure_ascii=False)
+                json.dump(ioc_record, f, indent=4, ensure_ascii=False, default=str)
             files_saved_count += 1
-            # Die folgende Zeile kann sehr gesprächig sein, wenn viele Dateien gespeichert werden.
-            # print(f"[Module 5] IOC gespeichert: {full_filepath}")
         except IOError as e:
             print(f"[Module 5] Fehler beim Schreiben der Datei '{full_filepath}': {e}")
         except TypeError as e:
-            # Dieser Fehler tritt auf, wenn das ioc_record nicht JSON-serialisierbar ist.
-            # Sollte bei der Struktur von Modul 4 nicht passieren.
             print(
                 f"[Module 5] Fehler: Daten für IOC '{ioc_value}' (Typ: {ioc_type}) sind nicht JSON-serialisierbar: {e}")
         except Exception as e:
@@ -113,7 +107,6 @@ def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summ
         print("[Module 5] CSV: Keine strukturierten IOCs zum Speichern erhalten.")
         return 0
 
-    # Erstelle das Ausgabeverzeichnis, falls es nicht existiert
     try:
         os.makedirs(output_directory, exist_ok=True)
     except OSError as e:
@@ -123,7 +116,6 @@ def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summ
     filepath = os.path.join(output_directory, filename)
     print(f"[Module 5] CSV-Datei wird erstellt: {os.path.abspath(filepath)}")
 
-    # Definiere die Spaltenüberschriften für die CSV-Datei
     headers = [
         "ioc_value", "ioc_type", "discovery_timestamp", "occurrence_count",
         "source_article_urls", "first_seen_context_snippet", "associated_cves",
@@ -133,7 +125,7 @@ def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summ
     try:
         with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=headers)
-            writer.writeheader()  # Schreibt die Kopfzeile
+            writer.writeheader()
 
             for ioc_record in structured_iocs_list:
                 source_urls_str = "|".join(ioc_record.get("source_article_urls", []))
@@ -151,7 +143,7 @@ def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summ
                 row = {
                     "ioc_value": ioc_record.get("ioc_value"),
                     "ioc_type": ioc_record.get("ioc_type"),
-                    "discovery_timestamp": ioc_record.get("discovery_timestamp"),
+                    "discovery_timestamp": str(ioc_record.get("discovery_timestamp")),
                     "occurrence_count": ioc_record.get("occurrence_count"),
                     "source_article_urls": source_urls_str,
                     "first_seen_context_snippet": context_str,
@@ -176,17 +168,6 @@ def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summ
 # -------------------------------------------------------------------
 # STIX-Ausgabe
 # -------------------------------------------------------------------
-
-COUNTRY_TO_ISO_CODE_MAP = {
-    "russia": "RU", "russian federation": "RU",
-    "china": "CN", "people's republic of china": "CN",
-    "iran": "IR",
-    "north korea": "KP", "dprk": "KP",
-    "united states": "US", "usa": "US",
-    "germany": "DE",
-}
-
-
 def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_intel_bundle.json"):
     """
     Erstellt ein STIX 2.1 Bundle aus den strukturierten IOCs und speichert es als JSON-Datei.
@@ -254,8 +235,9 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
 
         locations = []
         for country_info in ioc_record.get("associated_countries", []):
-            country_name = country_info["value"].lower()
-            iso_code = COUNTRY_TO_ISO_CODE_MAP.get(country_name)
+            iso_code = country_info.get("iso2_code")
+            country_name = country_info["value"]
+
             if iso_code and iso_code not in created_locations:
                 created_locations[iso_code] = stix2.Location(country=iso_code, name=country_name.title())
                 all_stix_objects.append(created_locations[iso_code])
@@ -279,9 +261,9 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
                 created_reports[url] = stix2.Report(
                     name=report_name,
                     description=report_desc,
-                    published=ioc_record["discovery_timestamp"],  # Verwende unseren Fund-Zeitstempel
+                    published=ioc_record["discovery_timestamp"],
                     report_types=['threat-report'],
-                    object_refs=[primary_sco.id]  # Referenziert den IOC
+                    object_refs=[primary_sco.id]
                 )
                 all_stix_objects.append(created_reports[url])
             else:
