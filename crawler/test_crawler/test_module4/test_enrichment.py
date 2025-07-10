@@ -22,7 +22,7 @@ class TestenrichmentNormalizeIOCValue(unittest.TestCase):
         print("\n[Test _normalize_ioc_value] test_normalize_other_types_unchanged")
         self.assertEqual(enrichment._normalize_ioc_value("192.168.1.1", "ipv4"), "192.168.1.1")
         self.assertEqual(enrichment._normalize_ioc_value("Malware.EXE", "file"),
-                         "Malware.EXE")  # Dateinamen bleiben case-sensitive
+                         "Malware.EXE")
         self.assertEqual(enrichment._normalize_ioc_value("CVE-2023-1234", "cve"), "CVE-2023-1234")
 
 
@@ -44,10 +44,10 @@ class TestenrichmentAddUniqueMention(unittest.TestCase):
         mention1 = {"value": "CVE-2023-1234", "context_snippet": "Context A"}
         target_list = [mention1.copy()]
         seen_set = {("CVE-2023-1234",)}
-        mention2 = {"value": "CVE-2023-1234", "context_snippet": "Context B"}  # Gleicher Wert, anderer Kontext
+        mention2 = {"value": "CVE-2023-1234", "context_snippet": "Context B"}
         enrichment._add_unique_mention(target_list, seen_set, mention2, ('value',))
-        self.assertEqual(len(target_list), 1)  # Sollte nicht erneut hinzugefügt werden
-        self.assertEqual(target_list[0]["context_snippet"], "Context A")  # Ursprünglicher Kontext bleibt
+        self.assertEqual(len(target_list), 1)
+        self.assertEqual(target_list[0]["context_snippet"], "Context A")
 
     def test_add_different_mentions(self):
         print("\n[Test _add_unique_mention] test_add_different_mentions")
@@ -67,23 +67,21 @@ class TestenrichmentAddUniqueMention(unittest.TestCase):
         seen_set = set()
         apt1 = {"value": "Fancy Bear", "normalized_value": "APT28", "context_snippet": "c1"}
         apt2 = {"value": "APT 28", "normalized_value": "APT28",
-                "context_snippet": "c2"}  # Gleicher Norm-Wert, anderer Value
+                "context_snippet": "c2"}
         apt3 = {"value": "Fancy Bear", "normalized_value": "APT28",
-                "context_snippet": "c3"}  # Duplikat von apt1 (basierend auf value+norm)
+                "context_snippet": "c3"}
 
-        # Einzigartigkeit basierend auf ('value', 'normalized_value')
         enrichment._add_unique_mention(target_list, seen_set, apt1, ('value', 'normalized_value'))
         enrichment._add_unique_mention(target_list, seen_set, apt2, ('value', 'normalized_value'))
         enrichment._add_unique_mention(target_list, seen_set, apt3, ('value', 'normalized_value'))
 
-        self.assertEqual(len(target_list), 2)  # apt1 und apt2 sind unterschiedlich, apt3 ist Duplikat von apt1
+        self.assertEqual(len(target_list), 2)
         self.assertIn(apt1, target_list)
         self.assertIn(apt2, target_list)
         self.assertIn(("Fancy Bear", "APT28"), seen_set)
         self.assertIn(("APT 28", "APT28"), seen_set)
 
 
-# Mocken des datetime-Moduls innerhalb von enrichment, um einen festen Zeitstempel zu erhalten
 @patch('crawler.module4.enrichment.datetime')
 class TestenrichmentProcessAndStructureIOCs(unittest.TestCase):
     """Testfälle für die Hauptfunktion process_and_structure_iocs."""
@@ -213,12 +211,9 @@ class TestenrichmentProcessAndStructureIOCs(unittest.TestCase):
         module3_output = [{
             "ioc_value": "clean.com", "ioc_type": "domain", "source_article_index": 0,
             "context_snippet": "Clean domain",
-            "associated_cves": [],  # Explizit leere Liste von Modul 3
-            # keine associated_countries, keine associated_apts
+            "associated_cves": [],
         }]
 
-        # process_and_structure_iocs sollte "clean.com" (normalisiert) zurückgeben
-        # und die Schlüssel für leere Assoziationslisten sollten nicht vorhanden sein.
         actual_output = enrichment.process_and_structure_iocs(module3_output, self.article_urls)
         self.assertEqual(len(actual_output), 1)
         processed_ioc = actual_output[0]

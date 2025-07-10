@@ -84,7 +84,7 @@ def _extract_links_from_html(soup, source_url):
         if not path.endswith('/'):
             score += 1
 
-        # Ein Link wird akzeptiert, wenn er eine Mindestpunktzahl erreicht (z.B. >= 2).
+        # Ein Link wird akzeptiert, wenn er eine Mindestpunktzahl erreicht
         # Das erlaubt z.B. einen Link mit kurzer URL aber langem Text, oder umgekehrt.
         if score >= 2:
             article_links.add(absolute_url)

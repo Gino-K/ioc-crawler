@@ -10,10 +10,9 @@ class TestModule1(unittest.TestCase):
     """
 
     # Test 1: Erfolgreiche Extraktion von Links aus einem RSS-Feed
-    @patch('crawler.module1.article.feedparser.parse')  # Mockt feedparser.parse innerhalb von test_module1
+    @patch('crawler.module1.article.feedparser.parse')
     def test_get_links_rss_success(self, mock_feedparser_parse):
         print("\n[Test] Führe test_get_links_rss_success aus...")
-        # Konfiguriere den Mock für feedparser.parse
         mock_feed_entry1 = MagicMock()
         mock_feed_entry1.link = "https://example.com/rss-article1"
         mock_feed_entry2 = MagicMock()
@@ -21,7 +20,7 @@ class TestModule1(unittest.TestCase):
 
         mock_parsed_feed = MagicMock()
         mock_parsed_feed.entries = [mock_feed_entry1, mock_feed_entry2]
-        mock_parsed_feed.bozo = 0  # Zeigt einen gut geformten Feed an
+        mock_parsed_feed.bozo = 0
         mock_feedparser_parse.return_value = mock_parsed_feed
 
         source_url = "https://example.com/feed.rss"
@@ -34,20 +33,18 @@ class TestModule1(unittest.TestCase):
         print("[Test] test_get_links_rss_success BEENDET.")
 
     # Test 2: RSS-Feed ist leer, es sollten keine Links zurückgegeben werden (und HTML wird versucht)
-    @patch('crawler.module1.article.requests.get')  # Mockt requests.get
-    @patch('crawler.module1.article.feedparser.parse')  # Mockt feedparser.parse
+    @patch('crawler.module1.article.requests.get')
+    @patch('crawler.module1.article.feedparser.parse')
     def test_get_links_rss_empty_fallback_to_html_empty(self, mock_feedparser_parse, mock_requests_get):
         print("\n[Test] Führe test_get_links_rss_empty_fallback_to_html_empty aus...")
-        # RSS-Feed ist leer
         mock_parsed_feed = MagicMock()
         mock_parsed_feed.entries = []
         mock_feedparser_parse.return_value = mock_parsed_feed
 
-        # HTML-Seite hat auch keine Links (oder gibt Fehler zurück)
         mock_response_html = MagicMock()
         mock_response_html.status_code = 200
         mock_response_html.content = "<html><body><p>Keine Links hier.</p></body></html>"
-        mock_response_html.raise_for_status = MagicMock()  # Stellt sicher, dass kein HTTPError ausgelöst wird
+        mock_response_html.raise_for_status = MagicMock()
         mock_requests_get.return_value = mock_response_html
 
         source_url = "https://example.com/empty-source"
@@ -65,12 +62,10 @@ class TestModule1(unittest.TestCase):
     @patch('crawler.module1.article.feedparser.parse')
     def test_get_links_thn_html_success(self, mock_feedparser_parse, mock_requests_get):
         print("\n[Test] Führe test_get_links_thn_html_success aus...")
-        # RSS-Versuch schlägt fehl oder ist leer
         mock_empty_feed = MagicMock()
         mock_empty_feed.entries = []
         mock_feedparser_parse.return_value = mock_empty_feed
 
-        # Mock für requests.get für thehackernews.com
         thn_html_content = """
         <html><body>
             <a class="story-link" href="https://thehackernews.com/2025/05/article1.html">THN Article 1</a>
@@ -126,10 +121,9 @@ class TestModule1(unittest.TestCase):
         mock_requests_get.return_value = mock_response_generic
 
         source_url = "https://example.com/mainpage"
-        # Erwartete Links (absolut und gefiltert nach generischer Logik)
         expected_links = [
-            "https://example.com/artikel/detail/toller-artikel.html",  # Erfüllt count('/') > 3 und .html
-            "https://example.com/news/another-article.htm"  # Erfüllt count('/') > 3 und .htm
+            "https://example.com/artikel/detail/toller-artikel.html",
+            "https://example.com/news/another-article.htm"
         ]
 
         actual_links = article.get_article_links_from_source(source_url)
@@ -170,11 +164,10 @@ class TestModule1(unittest.TestCase):
         mock_empty_feed.entries = []
         mock_feedparser_parse.return_value = mock_empty_feed
 
-        # Simuliere einen Netzwerkfehler
         mock_requests_get.side_effect = article.requests.exceptions.RequestException("Netzwerkproblem")
 
         source_url = "https://example.com/network-error-site"
-        expected_links = []  # Bei Fehler erwarten wir eine leere Liste
+        expected_links = []
 
         actual_links = article.get_article_links_from_source(source_url)
 
@@ -190,10 +183,8 @@ class TestModule1(unittest.TestCase):
         mock_empty_feed.entries = []
         mock_feedparser_parse.return_value = mock_empty_feed
 
-        # Simuliere eine HTTP-Fehlerantwort
         mock_response_http_error = MagicMock()
         mock_response_http_error.status_code = 404
-        # raise_for_status soll einen Fehler auslösen, wenn es aufgerufen wird
         mock_response_http_error.raise_for_status.side_effect = article.requests.exceptions.HTTPError("404 Not Found")
         mock_requests_get.return_value = mock_response_http_error
 
@@ -210,12 +201,10 @@ class TestModule1(unittest.TestCase):
     @patch('crawler.module1.article.feedparser.parse')
     def test_get_links_rss_empty_html_fallback_success(self, mock_feedparser_parse, mock_requests_get):
         print("\n[Test] Führe test_get_links_rss_empty_html_fallback_success aus...")
-        # RSS-Feed ist leer
         mock_parsed_feed = MagicMock()
         mock_parsed_feed.entries = []
         mock_feedparser_parse.return_value = mock_parsed_feed
 
-        # HTML-Seite hat Links (generischer Fall)
         generic_html_content = """
         <html><body>
             <a href="/artikel/wichtig.html">Wichtiger Artikel</a>
@@ -245,7 +234,6 @@ class TestModule1(unittest.TestCase):
         """
         source_url = "https://www.bleepingcomputer.com/"
 
-        # Vereinfachtes Mock-HTML, das die Struktur von Bleeping Computer nachahmt
         mock_html = """
         <html>
             <head><title>Bleeping Computer</title></head>

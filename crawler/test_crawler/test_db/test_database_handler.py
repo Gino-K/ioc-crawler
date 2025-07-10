@@ -16,21 +16,15 @@ class TestDatabaseHandler(unittest.TestCase):
         Erstellt eine saubere In-Memory-SQLite-Datenbank für jeden Test.
         """
         print(f"\n--- Setting up for {self._testMethodName} ---")
-        # 1. Erstelle eine In-Memory-Datenbank (`:memory:`)
         self.engine = create_engine('sqlite:///:memory:')
 
-        # 2. Erstelle alle Tabellen im Schema in dieser In-Memory-Datenbank
         Base.metadata.create_all(self.engine)
 
-        # 3. Erstelle eine Session-Klasse, die an unsere Test-Engine gebunden ist
         self.TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
-        # 4. Erstelle eine Instanz unseres Handlers speziell für diesen Test
         self.db_handler = DatabaseHandler(db_name=":memory:")
-        # Überschreibe die Session des Handlers mit unserer Test-Session
         self.db_handler.Session = self.TestingSessionLocal
 
-        # 5. Erstelle Beispieldaten (simuliert den Output von Modul 4)
         self.sample_ioc_data_1 = {
             "ioc_value": "evil.com", "ioc_type": "domain",
             "discovery_timestamp": "2025-06-08T12:00:00Z",
@@ -61,31 +55,23 @@ class TestDatabaseHandler(unittest.TestCase):
     def tearDown(self):
         """Wird nach jeder Testmethode ausgeführt."""
         print(f"--- Tearing down for {self._testMethodName} ---")
-        # Bei einer In-Memory-Datenbank ist kein Aufräumen nötig, sie wird verworfen.
         pass
 
     def test_get_or_create_functionality(self):
         """Testet die _get_or_create Hilfsfunktion des Handlers."""
         print("[TEST] test_get_or_create_functionality")
-        session = self.db_handler.Session()
+        with self.db_handler.Session() as session:
+            country1 = self.db_handler._get_or_create(session, Country, name="Testland", defaults={'iso2_code': 'DE'})
 
-        # Erster Aufruf: Sollte ein neues Country-Objekt erstellen
-        country1 = self.db_handler._get_or_create(session, Country, name="Testland",  iso2_code="xx", iso3_code="xxx", tld="xxx")
-        self.assertIsNotNone(country1.id)  # Muss eine ID nach dem Commit haben
+            session.commit()
 
-        # Zähle die Länder in der DB
-        country_count = session.query(Country).count()
-        self.assertEqual(country_count, 1)
+            self.assertIsNotNone(country1.id)
 
-        # Zweiter Aufruf mit denselben Daten: Sollte dasselbe Objekt zurückgeben
-        country2 = self.db_handler._get_or_create(session, Country, name="Testland")
-        self.assertEqual(country1.id, country2.id)
+            country2 = self.db_handler._get_or_create(session, Country, name="Testland", defaults={'iso2_code': 'DE'})
+            self.assertEqual(country1.id, country2.id)
 
-        # Zähle erneut, es sollte immer noch nur ein Land geben
-        country_count_after = session.query(Country).count()
-        self.assertEqual(country_count_after, 1)
-
-        session.close()
+            country_count_after = session.query(Country).count()
+            self.assertEqual(country_count_after, 1)
 
     def test_add_single_ioc_with_all_relations(self):
         """Testet das Hinzufügen eines einzelnen IOCs mit allen Beziehungstypen."""
@@ -171,9 +157,6 @@ class TestDatabaseHandler(unittest.TestCase):
         # 1. Arrange: Befülle die Datenbank mit Test-Sightings
         session = self.db_handler.Session()
 
-        # Wichtig: Wir erstellen hier absichtlich naive UTC-Zeitstempel,
-        # um das Verhalten im Fehlerprotokoll exakt nachzubilden.
-        # datetime.utcnow() erstellt einen naiven Zeitstempel, der aber auf UTC basiert.
         now_naive_utc = datetime.datetime.utcnow()
         t_old = now_naive_utc - datetime.timedelta(days=10)
         t_new = now_naive_utc - datetime.timedelta(days=1)
@@ -193,33 +176,25 @@ class TestDatabaseHandler(unittest.TestCase):
         session.commit()
         session.close()
 
-        # 2. Act: Rufe die zu testende Methode auf
         url_prefix = "https://test.com"
         result_map = self.db_handler.get_existing_sightings(url_prefix)
 
-        # 3. Assert: Überprüfe die Ergebnisse
+        # 2. Assert: Überprüfe die Ergebnisse
         self.assertIsInstance(result_map, dict)
         self.assertEqual(len(result_map), 2)
 
-        # --- KORREKTUR HIER ---
-        # Hole den "informierten" Zeitstempel aus der Datenbank
         actual_aware_timestamp_art1 = result_map.get("https://test.com/article1")
         actual_aware_timestamp_art2 = result_map.get("https://test.com/article2")
 
         self.assertIsNotNone(actual_aware_timestamp_art1)
         self.assertIsNotNone(actual_aware_timestamp_art2)
 
-        # Wandle den "informierten" Zeitstempel aus der DB in einen "naiven" um,
-        # um ihn mit t_new und t_old vergleichen zu können.
-        # .replace(tzinfo=None) entfernt die Zeitzonen-Information.
         actual_naive_timestamp_art1 = actual_aware_timestamp_art1.replace(tzinfo=None)
         actual_naive_timestamp_art2 = actual_aware_timestamp_art2.replace(tzinfo=None)
 
-        # Vergleiche die beiden jetzt naiven Zeitstempel
         self.assertEqual(actual_naive_timestamp_art1, t_new)
         self.assertEqual(actual_naive_timestamp_art2, t_old)
 
-        # Teste einen Fall, der keine Ergebnisse liefern sollte
         empty_result_map = self.db_handler.get_existing_sightings("https://nonexistent.com")
         self.assertEqual(len(empty_result_map), 0)
 
@@ -245,7 +220,7 @@ class TestDatabaseHandler(unittest.TestCase):
         print("  Szenario 1: Finde über primären Namen 'APT28'")
         apt_info1 = {"value": "APT28", "normalized_value": "APT28"}
         found_apt1 = self.db_handler._find_or_create_apt(session, apt_info1)
-        self.assertEqual(found_apt1.id, preloaded_apt_id)  # Muss dasselbe Objekt sein
+        self.assertEqual(found_apt1.id, preloaded_apt_id)
 
         # Es darf kein neues Objekt erstellt worden sein
         self.assertEqual(session.query(APT).count(), 1)
@@ -254,7 +229,7 @@ class TestDatabaseHandler(unittest.TestCase):
         print("  Szenario 2: Finde über Alias 'Fancy Bear'")
         apt_info2 = {"value": "Fancy Bear", "normalized_value": "APT28"}
         found_apt2 = self.db_handler._find_or_create_apt(session, apt_info2)
-        self.assertEqual(found_apt2.id, preloaded_apt_id)  # Muss immer noch dasselbe Objekt sein
+        self.assertEqual(found_apt2.id, preloaded_apt_id)
 
         # Die Anzahl der APTs in der DB muss immer noch 1 sein
         self.assertEqual(session.query(APT).count(), 1)
@@ -266,7 +241,6 @@ class TestDatabaseHandler(unittest.TestCase):
         self.assertNotEqual(found_apt3.id, preloaded_apt_id)  # Muss eine neue ID haben
         self.assertEqual(found_apt3.name, "New Group")
 
-        # Jetzt sollten 2 APTs in der Datenbank sein
         self.assertEqual(session.query(APT).count(), 2)
 
         session.close()

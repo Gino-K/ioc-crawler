@@ -234,7 +234,7 @@ class TestModule2ProcessArticleLinks(unittest.TestCase):
         # Simuliere unterschiedliche Rückgabewerte für extract_and_clean_content
         mock_extract_content.side_effect = [
             "Content for article 1",
-            None,  # Simuliert einen Fehler oder keinen Inhalt für article2
+            None,
             "Content for article 3"
         ]
 
