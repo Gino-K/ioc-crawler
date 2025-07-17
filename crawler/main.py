@@ -4,6 +4,8 @@ import os
 from urllib.parse import urlparse
 
 from db.database_handler import DatabaseHandler
+from settings.user_settings import UserSettings
+
 from module1 import article
 from module2 import text
 from module3 import ioc_context
@@ -99,11 +101,12 @@ def main():
     load_and_compile_country_regex(db_handler)
     load_and_compile_apt_regex(db_handler)
 
-    for source_url in DATA_SOURCES:
+    settings = UserSettings()
+
+    for source_url in settings.source_urls:
         print(f"\n[Main] Verarbeite Hauptquelle: {source_url}")
-        # 1. Sammle *alle* potenziellen Links von der Quelle
         try:
-            all_links_from_source = article.get_article_links_from_source(source_url)
+            all_links_from_source = article.get_article_links_from_source(source_url, user_blacklist=settings.blacklist_keywords)
             if not all_links_from_source:
                 print(f"[Main] Keine Artikel-Links von '{source_url}' gefunden.")
                 print("-" * 40)
@@ -115,20 +118,20 @@ def main():
 
         print(f"[Main] {len(all_links_from_source)} Links von '{source_url}' gesammelt. Beginne Filterung gegen DB...")
 
-        # 2. Hole bereits bekannte Links aus der DB für diese Domain
+        # Hole bereits bekannte Links aus der DB für diese Domain
         # Wir extrahieren das Schema und die Domain, um ein sauberes Präfix zu haben.
         parsed_uri = urlparse(source_url)
         url_prefix = f"{parsed_uri.scheme}://{parsed_uri.netloc}"
         existing_sightings_map = db_handler.get_existing_sightings(url_prefix)
 
-        # 3. Filtere die gesammelten Links
+        # Filtere die gesammelten Links
         links_to_process = filter_links_by_timestamp(all_links_from_source, existing_sightings_map)
 
         skipped_count = len(all_links_from_source) - len(links_to_process)
         print(
             f"[Filter] {len(links_to_process)} Links zur Verarbeitung ausgewählt ({skipped_count} bekannte/aktuelle Links übersprungen).")
 
-        # 4. Füge nur die gefilterten Links zur globalen Liste hinzu
+        # Füge nur die gefilterten Links zur globalen Liste hinzu
         if links_to_process:
             all_article_links_globally.extend(links_to_process)
 

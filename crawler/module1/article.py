@@ -8,14 +8,21 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 }
 
+INTERNAL_BLACKLIST = [
+    '/search', '/tag/', '/author/', '/login', '/signup', '/forums', '/forum/',
+    '/legal/', '/glossary/', '/news-tip/', 'mailto:', 'tel:', '/about',
+    '/offer/', '/deals/'
+]
 
-def _extract_links_from_html(soup, source_url):
+def _extract_links_from_html(soup, source_url, user_blacklist):
     """
     Extrahiert Artikel-Links aus einem BeautifulSoup-Objekt mit einer flexiblen,
     Score-basierten Funktion.
     """
     article_links = set()
     source_domain = urlparse(source_url).netloc
+
+    full_blacklist = INTERNAL_BLACKLIST + user_blacklist
 
     content_selectors = [
         'article', 'main', 'div#main-col', 'div.bc_latest_news', 'div#content',
@@ -59,12 +66,7 @@ def _extract_links_from_html(soup, source_url):
         if not path or not link_text:
             continue
 
-        blacklist = [
-            '/search', '/tag/', '/author/', '/login', '/signup', '/forums', '/forum/',
-            '/legal/', '/glossary/', '/news-tip/', 'mailto:', 'tel:', '/about',
-            '/offer/', '/deals/'
-        ]
-        if any(re.search(keyword, path, re.IGNORECASE) for keyword in blacklist):
+        if any(re.search(keyword, path, re.IGNORECASE) for keyword in full_blacklist):
             continue
 
         # *** FLEXIBLE SCORE-BASIERTE Funktion ***
@@ -92,11 +94,13 @@ def _extract_links_from_html(soup, source_url):
     return sorted(list(article_links))
 
 
-def get_article_links_from_source(source_url):
+def get_article_links_from_source(source_url, user_blacklist):
     """
     Sammelt Links zu einzelnen Artikeln von einer gegebenen Quell-URL.
     Die Quelle kann eine HTML-Webseite oder ein RSS-Feed sein.
     """
+    if user_blacklist is None:
+        user_blacklist = []
     print(f"[Module 1] Verarbeite Quelle: {source_url}")
 
     try:
@@ -118,7 +122,7 @@ def get_article_links_from_source(source_url):
         response = requests.get(source_url, headers=HEADERS, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
-        article_links = _extract_links_from_html(soup, source_url)
+        article_links = _extract_links_from_html(soup, source_url, user_blacklist)
         print(f"[Module 1] {len(article_links)} Links nach HTML-Verarbeitung von {source_url} extrahiert.")
         return article_links
     except requests.exceptions.RequestException as e:

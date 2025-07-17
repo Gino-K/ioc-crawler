@@ -26,21 +26,40 @@ def create_or_update_windows_task(day_of_week_str: str, time_str: str) -> bool:
 
     print(f"\nFühre folgenden Befehl aus:\n{command}\n")
     try:
-        subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+        subprocess.run(command, shell=True, check=True, capture_output=True, text=True, encoding='utf-8')
         print("ERFOLG: Die geplante Windows-Aufgabe wurde erfolgreich erstellt oder aktualisiert.")
         return True
     except subprocess.CalledProcessError as e:
         print("FEHLER: Die geplante Windows-Aufgabe konnte nicht erstellt werden.")
         print(f"Fehlermeldung (stderr): {e.stderr}")
-        print("\n>>> WICHTIG: Wurde das Skript mit Administratorrechten ausgeführt? <<<")
+        print("\n>>> WICHTIG: Wurde die Anwendung mit Administratorrechten ausgeführt? <<<")
+        return False
+    except FileNotFoundError:
+        print("FEHLER: 'schtasks.exe' wurde nicht gefunden. Dieses Skript ist nur für Windows geeignet.")
+        return False
+
+
+def delete_windows_task() -> bool:
+    """Löscht die geplante Aufgabe aus dem Windows Task Scheduler."""
+    print(f"Windows erkannt. Versuche, die Aufgabe '{WINDOWS_TASK_NAME}' zu löschen...")
+    command = f'schtasks /Delete /TN "{WINDOWS_TASK_NAME}" /F'
+    try:
+        subprocess.run(command, shell=True, check=True, capture_output=True, text=True, encoding='utf-8')
+        print("ERFOLG: Die geplante Windows-Aufgabe wurde gelöscht.")
+        return True
+    except subprocess.CalledProcessError as e:
+        # Fehlercode 1 bedeutet oft "Task nicht gefunden", was okay ist
+        if e.returncode == 1:
+            print("INFO: Geplante Aufgabe existierte nicht, nichts zu löschen.")
+            return True
+        print(f"FEHLER beim Löschen der Aufgabe: {e.stderr}")
         return False
 
 
 def create_or_update_cron_job(day_of_week_num: int, time_str: str) -> bool:
     """
-    Erstellt oder aktualisiert einen Cron-Job für Linux/macOS-ähnliche Systeme.
-    Liest die bestehende crontab aus, entfernt den alten Job (falls vorhanden)
-    und fügt den neuen hinzu.
+    Erstellt oder aktualisiert einen Cron-Job für Linux-Systeme.
+    Liest die bestehende crontab aus, entfernt den alten Job und fügt den neuen hinzu.
     """
     print(f"Linux erkannt. Versuche, einen Cron-Job zu erstellen/aktualisieren...")
 
@@ -52,13 +71,9 @@ def create_or_update_cron_job(day_of_week_num: int, time_str: str) -> bool:
     print(f"\nNeuer Cron-Eintrag:\n{new_cron_job}\n")
 
     try:
-        current_crontab = subprocess.run(['crontab', '-l'], capture_output=True, text=True, check=False)
+        current_crontab = subprocess.run(['crontab', '-l'], capture_output=True, text=True, check=False).stdout
 
-        new_crontab_lines = []
-        if current_crontab.returncode == 0:
-            for line in current_crontab.stdout.splitlines():
-                if CRON_JOB_MARKER not in line:
-                    new_crontab_lines.append(line)
+        new_crontab_lines = [line for line in current_crontab.splitlines() if CRON_JOB_MARKER not in line]
 
         new_crontab_lines.append(new_cron_job)
 
@@ -78,22 +93,37 @@ def create_or_update_cron_job(day_of_week_num: int, time_str: str) -> bool:
         return False
 
 
-def setup_scheduled_task(day_of_week: str, time_str: str) -> bool:
-    """
-    Hauptfunktion, die das Betriebssystem erkennt und die passende
-    Scheduling-Methode aufruft.
+def delete_cron_job() -> bool:
+    """Entfernt den Cron-Job aus der crontab des Benutzers."""
+    print(f"Linux erkannt. Versuche, den Cron-Job zu löschen...")
+    try:
+        current_crontab = subprocess.run(['crontab', '-l'], capture_output=True, text=True, check=False).stdout
+        new_crontab_lines = [line for line in current_crontab.splitlines() if CRON_JOB_MARKER not in line]
 
-    Args:
-        day_of_week (str): Der deutsche Name des Wochentags (z.B. "Montag").
-        time_str (str): Die Uhrzeit im HH:MM-Format (z.B. '17:00').
+        if len(new_crontab_lines) == len(current_crontab.splitlines()):
+            print("INFO: Kein Cron-Job mit dem Marker gefunden, nichts zu löschen.")
+            return True
 
-    Returns:
-        bool: True bei Erfolg, sonst False.
+        if not new_crontab_lines:
+            subprocess.run(['crontab', '-r'], check=True)
+            print("ERFOLG: Der Cron-Job wurde gelöscht und die crontab war danach leer.")
+        else:
+            new_crontab_content = "\n".join(new_crontab_lines) + "\n"
+            subprocess.run(['crontab', '-'], input=new_crontab_content, text=True, check=True)
+            print("ERFOLG: Der Cron-Job wurde aus der crontab entfernt.")
+        return True
+    except Exception as e:
+        print(f"FEHLER beim Löschen des Cron-Jobs: {e}")
+        return False
+
+
+def manage_schedule(day_of_week: str, time_str: str, enabled: bool) -> bool:
     """
-    day_map_windows = {"Montag": "MON", "Dienstag": "TUE", "Mittwoch": "WED", "Donnerstag": "THU", "Freitag": "FRI",
-                       "Samstag": "SAT", "Sonntag": "SUN"}
-    day_map_linux = {"Montag": 1, "Dienstag": 2, "Mittwoch": 3, "Donnerstag": 4, "Freitag": 5, "Samstag": 6,
-                     "Sonntag": 7}
+    Hauptfunktion, die eine geplante Aufgabe erstellt, aktualisiert oder löscht.
+    Wird von der GUI aufgerufen.
+    """
+    day_map_windows = {"Montag": "MON", "Dienstag": "TUE", "Mittwoch": "WED", "Donnerstag": "THU", "Freitag": "FRI", "Samstag": "SAT", "Sonntag": "SUN"}
+    day_map_linux = {"Montag": 1, "Dienstag": 2, "Mittwoch": 3, "Donnerstag": 4, "Freitag": 5, "Samstag": 6, "Sonntag": 0} # Sonntag ist 0 für cron
 
     if day_of_week not in day_map_windows:
         print(f"FEHLER: Ungültiger Wochentag '{day_of_week}'.")
@@ -101,9 +131,15 @@ def setup_scheduled_task(day_of_week: str, time_str: str) -> bool:
 
     # Automatische Systemerkennung
     if sys.platform == "win32":
-        return create_or_update_windows_task(day_map_windows[day_of_week], time_str)
+        if enabled:
+            return create_or_update_windows_task(day_map_windows[day_of_week], time_str)
+        else:
+            return delete_windows_task()
     elif sys.platform == "linux":
-        return create_or_update_cron_job(day_map_linux[day_of_week], time_str)
+        if enabled:
+            return create_or_update_cron_job(day_map_linux[day_of_week], time_str)
+        else:
+            return delete_cron_job()
     elif sys.platform == "darwin":
         print("HINWEIS: macOS wird derzeit für die automatische Erstellung von geplanten Aufgaben nicht unterstützt.")
         print("Bitte erstellen Sie den Cron-Job manuell, z.B. mit 'crontab -e'.")
