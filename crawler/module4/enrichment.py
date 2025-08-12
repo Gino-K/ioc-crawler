@@ -1,8 +1,10 @@
 import datetime
-from db.database_handler import DatabaseHandler
+import re
+
+from db.crawler_db_handler import CrawlerDBHandler
 
 def _normalize_ioc_value(ioc_value, ioc_type):
-    """Normalisiert den IOC-Wert (z.B. Kleinschreibung für Domains/E-Mails)."""
+    """Normalisiert den IOC-Wert (z.B. Kleinschreibung fuer Domains/E-Mails)."""
     if ioc_type in ["domain", "email"]:
         return ioc_value.lower()
     return ioc_value
@@ -10,15 +12,8 @@ def _normalize_ioc_value(ioc_value, ioc_type):
 
 def _add_unique_mention(target_mention_list, seen_mention_values_set, new_mention_item, unique_key_fields):
     """
-    Fügt ein Erwähnungselement zur Zielliste hinzu, falls es neu ist.
+    Fuegt ein Erwaehnungselement zur Zielliste hinzu, falls es neu ist.
     Die Einzigartigkeit wird durch die Werte der `unique_key_fields` im `new_mention_item` bestimmt.
-
-    Args:
-        target_mention_list (list): Die Liste, zu der das Element hinzugefügt werden soll.
-        seen_mention_values_set (set): Ein Set zum Speichern der bereits gesehenen einzigartigen Schlüssel-Tupel.
-        new_mention_item (dict): Das hinzuzufügende Erwähnungselement (z.B. {"value": "CVE-...", "context_snippet": "..."}).
-        unique_key_fields (tuple): Ein Tupel von Feldnamen, die die Einzigartigkeit definieren
-                                   (z.B. ('value',) für CVEs, ('value', 'normalized_value') für APTs).
     """
     key_parts = []
     for field in unique_key_fields:
@@ -31,87 +26,93 @@ def _add_unique_mention(target_mention_list, seen_mention_values_set, new_mentio
         seen_mention_values_set.add(unique_tuple)
 
 
-def process_and_structure_iocs(annotated_iocs_from_module3: list,
-                               article_urls_list_from_main: list,
-                               db_handler: 'DatabaseHandler') -> list:
+def _proximity_search(text, primary_ioc_value, mentions_list, window=250):
     """
-    Normalisiert, dedupliziert und reichert IOCs aus der Ausgabe von Modul 3 an,
-    indem es Daten aus der Datenbank abruft.
+    Sucht, welche Erwaehnungen in der Naehe eines primaeren IOCs im Text vorkommen.
+    """
+    associated_mentions = []
+    for match in re.finditer(r'\b' + re.escape(primary_ioc_value) + r'\b', text, re.IGNORECASE):
+        start, end = match.span()
+        search_start = max(0, start - window)
+        search_end = min(len(text), end + window)
+        search_area = text[search_start:search_end]
+
+        for mention in mentions_list:
+            mention_value = mention.get('ioc_value')
+            if mention_value and re.search(r'\b' + re.escape(mention_value) + r'\b', search_area, re.IGNORECASE):
+                associated_mentions.append(mention)
+
+    return associated_mentions
+
+
+def process_and_structure_iocs(annotated_iocs_from_module3: list,
+                               article_texts_map: dict,
+                               db_handler: 'CrawlerDBHandler') -> list:
+    """
+    Normalisiert, dedupliziert und reichert IOCs mittels Proximity-Analyse an,
+    um sicherzustellen, dass nur relevante Entitaeten verknuepft werden.
     """
     unique_processed_iocs = {}
     current_discovery_timestamp = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
 
-    print(
-        f"\n[Module 4] Starte Strukturierung und Anreicherung für {len(annotated_iocs_from_module3)} Roh-IOC-Einträge von Modul 3...")
+    print(f"\n[Modul 4] Starte Strukturierung und Anreicherung mit Proximity-Analyse...")
+
+    items_by_article = {}
+    for item in annotated_iocs_from_module3:
+        idx = item['source_article_index']
+        items_by_article.setdefault(idx, []).append(item)
 
     with db_handler.Session() as session:
-        for raw_annotated_ioc in annotated_iocs_from_module3:
-            original_ioc_value = raw_annotated_ioc['ioc_value']
-            ioc_type = raw_annotated_ioc['ioc_type']
-            source_article_idx = raw_annotated_ioc['source_article_index']
-            primary_ioc_context = raw_annotated_ioc.get('context_snippet', '')
+        for article_idx, items in items_by_article.items():
+            full_text = article_texts_map['texts'].get(article_idx)
+            current_article_url = article_texts_map['urls'][article_idx]
+            if not full_text: continue
 
-            normalized_ioc_value = _normalize_ioc_value(original_ioc_value, ioc_type)
-            ioc_key_tuple = (normalized_ioc_value, ioc_type)
+            primary_iocs = [i for i in items if i['ioc_type'] in ["ipv4", "domain", "md5", "sha256", "file", "email"]]
+            cve_mentions = [i for i in items if i['ioc_type'] == 'cve']
+            country_mentions = [i for i in items if i['ioc_type'] == 'country_mention']
+            apt_mentions = [i for i in items if i['ioc_type'] == 'apt_group_mention']
 
-            try:
-                current_article_url = article_urls_list_from_main[source_article_idx]
-            except IndexError:
-                print(f"[Module 4] Warnung: Ungültiger source_article_index ({source_article_idx}).")
-                continue
+            for p_ioc in primary_iocs:
+                normalized_value = _normalize_ioc_value(p_ioc['ioc_value'], p_ioc['ioc_type'])
+                ioc_key = (normalized_value, p_ioc['ioc_type'])
 
-            if ioc_key_tuple not in unique_processed_iocs:
-                unique_processed_iocs[ioc_key_tuple] = {
-                    "ioc_value": normalized_ioc_value,
-                    "ioc_type": ioc_type,
-                    "discovery_timestamp": current_discovery_timestamp,
-                    "source_article_urls": {current_article_url},
-                    "first_seen_context_snippet": primary_ioc_context,
-                    "associated_cves": [],
-                    "_seen_cve_values_for_ioc": set(),
-                    "associated_countries": [],
-                    "_seen_country_values_for_ioc": set(),
-                    "associated_apts": [],
-                    "_seen_apt_values_for_ioc": set(),
-                    "occurrence_count": 1
-                }
-            else:
-                unique_processed_iocs[ioc_key_tuple]["occurrence_count"] += 1
-                unique_processed_iocs[ioc_key_tuple]["source_article_urls"].add(current_article_url)
+                nearby_cves = _proximity_search(full_text, p_ioc['ioc_value'], cve_mentions)
+                nearby_countries = _proximity_search(full_text, p_ioc['ioc_value'], country_mentions)
+                nearby_apts = _proximity_search(full_text, p_ioc['ioc_value'], apt_mentions)
 
-            current_unique_ioc_entry = unique_processed_iocs[ioc_key_tuple]
+                if ioc_key not in unique_processed_iocs:
+                    unique_processed_iocs[ioc_key] = {
+                        "ioc_value": normalized_value, "ioc_type": p_ioc['ioc_type'],
+                        "discovery_timestamp": current_discovery_timestamp,
+                        "source_article_urls": {current_article_url},
+                        "first_seen_context_snippet": p_ioc.get('context_snippet', ''),
+                        "associated_cves": [], "_seen_cve_values_for_ioc": set(),
+                        "associated_countries": [], "_seen_country_values_for_ioc": set(),
+                        "associated_apts": [], "_seen_apt_values_for_ioc": set(),
+                        "occurrence_count": 1
+                    }
+                else:
+                    unique_processed_iocs[ioc_key]["occurrence_count"] += 1
+                    unique_processed_iocs[ioc_key]["source_article_urls"].add(current_article_url)
 
-            for country_mention in raw_annotated_ioc.get("associated_countries", []):
-                country_db = db_handler.find_country(session, country_mention['value'])
-                if country_db:
-                    country_mention['iso2_code'] = country_db.iso2_code
-                    country_mention['iso3_code'] = country_db.iso3_code
-                    country_mention['tld'] = country_db.tld
+                entry = unique_processed_iocs[ioc_key]
+                for cve in nearby_cves:
+                    _add_unique_mention(entry['associated_cves'], entry['_seen_cve_values_for_ioc'], cve, ('value',))
 
-                _add_unique_mention(
-                    current_unique_ioc_entry["associated_countries"],
-                    current_unique_ioc_entry["_seen_country_values_for_ioc"],
-                    country_mention, ('value',)
-                )
+                for country in nearby_countries:
+                    country_db = db_handler.find_country(session, country['value'])
+                    if country_db:
+                        country['iso2_code'] = country_db.iso2_code
+                    _add_unique_mention(entry['associated_countries'], entry['_seen_country_values_for_ioc'], country,
+                                        ('value',))
 
-            for apt_mention in raw_annotated_ioc.get("associated_apts", []):
-                apt_db = db_handler._find_or_create_apt(session, apt_mention)
-                if apt_db:
-                    apt_mention['description'] = apt_db.description
-                    apt_mention['aliases'] = apt_db.aliases
-
-                _add_unique_mention(
-                    current_unique_ioc_entry["associated_apts"],
-                    current_unique_ioc_entry["_seen_apt_values_for_ioc"],
-                    apt_mention, ('value', 'normalized_value')
-                )
-
-            for cve_mention in raw_annotated_ioc.get("associated_cves", []):
-                _add_unique_mention(
-                    current_unique_ioc_entry["associated_cves"],
-                    current_unique_ioc_entry["_seen_cve_values_for_ioc"],
-                    cve_mention, ('value',)
-                )
+                for apt in nearby_apts:
+                    apt_db = db_handler.find_or_create_apt(session, apt)
+                    if apt_db:
+                        apt['description'] = apt_db.description
+                    _add_unique_mention(entry['associated_apts'], entry['_seen_apt_values_for_ioc'], apt,
+                                        ('value', 'normalized_value'))
 
     final_list_of_iocs = []
     for ioc_data_dict in unique_processed_iocs.values():
@@ -119,13 +120,11 @@ def process_and_structure_iocs(annotated_iocs_from_module3: list,
         ioc_data_dict.pop("_seen_cve_values_for_ioc", None)
         ioc_data_dict.pop("_seen_country_values_for_ioc", None)
         ioc_data_dict.pop("_seen_apt_values_for_ioc", None)
-
         if not ioc_data_dict.get("associated_cves"): ioc_data_dict.pop("associated_cves", None)
         if not ioc_data_dict.get("associated_countries"): ioc_data_dict.pop("associated_countries", None)
         if not ioc_data_dict.get("associated_apts"): ioc_data_dict.pop("associated_apts", None)
-
         final_list_of_iocs.append(ioc_data_dict)
 
     print(
-        f"[Module 4] Strukturierung und Anreicherung abgeschlossen. {len(final_list_of_iocs)} einzigartige, strukturierte IOC-Datensätze erstellt.")
+        f"[Modul 4] Strukturierung und Anreicherung abgeschlossen. {len(final_list_of_iocs)} einzigartige IOC-Datensaetze erstellt.")
     return final_list_of_iocs

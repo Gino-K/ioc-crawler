@@ -7,8 +7,8 @@ import stix2
 
 def _sanitize_filename(name_part, max_length=100):
     """
-    Bereinigt einen String, um ihn als Teil eines Dateinamens verwenden zu können.
-    Ersetzt problematische Zeichen und kürzt ihn bei Bedarf.
+    Bereinigt einen String, um ihn als Teil eines Dateinamens verwenden zu koennen.
+    Ersetzt problematische Zeichen und kaerzt ihn bei Bedarf.
     """
     if not isinstance(name_part, str):
         name_part = str(name_part)
@@ -49,7 +49,7 @@ def save_iocs_to_json_files(structured_iocs_list, output_directory):
 
     Args:
         structured_iocs_list (list): Liste der einzigartigen, strukturierten und angereicherten
-                                     IOC-Datensätze von Modul 4.
+                                     IOC-Datensaetze von Modul 4.
         output_directory (str): Das Verzeichnis, in dem die JSON-Dateien gespeichert werden sollen.
     """
     if not structured_iocs_list:
@@ -82,7 +82,7 @@ def save_iocs_to_json_files(structured_iocs_list, output_directory):
             print(f"[Module 5] Fehler beim Schreiben der Datei '{full_filepath}': {e}")
         except TypeError as e:
             print(
-                f"[Module 5] Fehler: Daten für IOC '{ioc_value}' (Typ: {ioc_type}) sind nicht JSON-serialisierbar: {e}")
+                f"[Module 5] Fehler: Daten faer IOC '{ioc_value}' (Typ: {ioc_type}) sind nicht JSON-serialisierbar: {e}")
         except Exception as e:
             print(f"[Module 5] Ein unerwarteter Fehler ist beim Speichern von IOC '{ioc_value}' aufgetreten: {e}")
 
@@ -90,18 +90,12 @@ def save_iocs_to_json_files(structured_iocs_list, output_directory):
         f"[Module 5] Speicherung abgeschlossen. {files_saved_count} IOC(s) in separate JSON-Dateien im Verzeichnis '{os.path.abspath(output_directory)}' gespeichert.")
     return files_saved_count
 
-# -------------------------------------------------------------------
-# CSV-Ausgabe
-# -------------------------------------------------------------------
+
 def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summary.csv"):
     """
-    Speichert eine Zusammenfassung der strukturierten IOC-Datensätze in einer einzigen CSV-Datei.
+    Speichert eine Zusammenfassung der strukturierten IOC-Datensaetze in einer einzigen CSV-Datei.
     Listen-artige Felder werden durch ein Trennzeichen getrennt.
 
-    Args:
-        structured_iocs_list (list): Liste der einzigartigen, strukturierten IOCs von Modul 4.
-        output_directory (str): Das Verzeichnis, in dem die CSV-Datei gespeichert wird.
-        filename (str): Der Dateiname für die CSV-Datei.
     """
     if not structured_iocs_list:
         print("[Module 5] CSV: Keine strukturierten IOCs zum Speichern erhalten.")
@@ -165,9 +159,6 @@ def save_iocs_to_csv(structured_iocs_list, output_directory, filename="iocs_summ
         return 0
 
 
-# -------------------------------------------------------------------
-# STIX-Ausgabe
-# -------------------------------------------------------------------
 def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_intel_bundle.json"):
     """
     Erstellt ein STIX 2.1 Bundle aus den strukturierten IOCs und speichert es als JSON-Datei.
@@ -175,7 +166,7 @@ def save_iocs_to_stix(structured_iocs_list, output_directory, filename="threat_i
     Args:
         structured_iocs_list (list): Liste der einzigartigen, strukturierten IOCs von Modul 4.
         output_directory (str): Das Verzeichnis, in dem die STIX-Datei gespeichert wird.
-        filename (str): Der Dateiname für das STIX Bundle.
+        filename (str): Der Dateiname faer das STIX Bundle.
     """
     if not structured_iocs_list:
         print("[Module 5] STIX: Keine strukturierten IOCs zum Speichern erhalten.")
