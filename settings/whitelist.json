@@ -1,0 +1,44 @@
+{
+  "domains": [
+    "virustotal.com",
+    "snort.org",
+    "talosintelligence.com",
+    "microsoft.com",
+    "phishing.com",
+    "google.com",
+    "apple.com",
+    "github.com",
+    "gitlab.com",
+    "asp.net",
+    "twitter.com",
+    "linkedin.com",
+    "facebook.com",
+    "www.salesforce.com",
+    "docker.io",
+    "github.com",
+    "cmd.exe",
+    "www.bsi.bund.de",
+    "claude.ai",
+    "cline.bot"
+  ],
+  "ips": [
+    "1.1.1.1",
+    "1.0.0.1",
+    "8.8.8.8",
+    "8.8.4.4",
+    "0.0.0.0",
+    "127.0.0.1"
+  ],
+  "files": [
+    "node.js",
+    "cmd.exe",
+    "mcp.json",
+    "package.json",
+    "AsIO3.sys",
+    "PowerShell.exe"
+  ],
+  "emails": [],
+  "md5": [],
+  "sha1": [],
+  "sha256": []
+}

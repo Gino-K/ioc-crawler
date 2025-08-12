@@ -1,0 +1,22 @@
+{
+    "source_urls": [
+        "https://www.bleepingcomputer.com/",
+        "https://thehackernews.com/",
+        "https://blog.talosintelligence.com/"
+    ],
+    "blacklist_keywords": [
+        "/offer/",
+        "/deals/"
+    ],
+    "schedule": {
+        "day": "Sonntag",
+        "time": "21:00",
+        "enabled": true
+    },
+    "last_preload_timestamp": "2025-08-03T15:30:54.276972+00:00",
+    "export_formats": {
+        "json": false,
+        "csv": false,
+        "stix": false
+    }
+}
