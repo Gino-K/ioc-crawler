@@ -61,7 +61,7 @@ def create_or_update_cron_job(day_of_week_num: int, time_str: str) -> bool:
     Der Cron-Job fuehrt das 'run_crawler_lin.sh' Skript aus.
     """
     print("Linux erkannt. Versuche, einen Cron-Job zu erstellen/aktualisieren...")
-    print(f"Stelle sicher, dass das Skript '{SHELL_SCRIPT_PATH}' ausfuehrbar ist (chmod +x run_crawler.sh).")
+    print(f"Stelle sicher, dass das Skript '{SHELL_SCRIPT_PATH}' ausfuehrbar ist (chmod +x run_crawler_linux.sh).")
 
     hour, minute = time_str.split(':')
 
