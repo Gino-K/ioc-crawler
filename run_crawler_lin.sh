@@ -19,7 +19,7 @@ CRAWLER_MODULE="crawler.crawler_orch"
 if [ ! -f "$PYTHON_EXE" ]; then
     echo "[SHELL] FEHLER: Python Executable nicht gefunden unter: $PYTHON_EXE"
     echo "[SHELL] Stelle sicher, dass das Virtual Environment existiert und korrekt eingerichtet ist."
-    read -p "Drücke eine beliebige Taste zum Beenden..."
+    read -p "Druecke eine beliebige Taste zum Beenden..."
     exit 1
 fi
 
@@ -44,5 +44,5 @@ fi
 
 } >> "$LOGFILE" 2>&1
 
-echo "[SHELL] Skriptausführung beendet. Prüfe die Log-Datei: $LOGFILE"
+echo "[SHELL] Skriptausfuehrung beendet. Pruefe die Log-Datei: $LOGFILE"
 exit 0

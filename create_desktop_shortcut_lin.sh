@@ -1,10 +1,10 @@
 #!/bin/bash
 # ===================================================================
-#  Shell-Skript zur Erstellung einer .desktop-Verknüpfung
-#  für den IOC Webcrawler unter Linux.
+#  Shell-Skript zur Erstellung einer .desktop-Verknuepfung
+#  fuer den IOC Webcrawler unter Linux.
 # ===================================================================
 
-echo "Erstelle Verknüpfung für IOC Crawler auf dem Desktop..."
+echo "Erstelle Verknuepfung fuer IOC Crawler auf dem Desktop..."
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
@@ -34,7 +34,7 @@ EOF
 
 chmod +x "$SHORTCUT_PATH"
 
-echo "Verknüpfung '${SHORTCUT_NAME}' erfolgreich auf dem Desktop erstellt."
+echo "Verknuepfung '${SHORTCUT_NAME}' erfolgreich auf dem Desktop erstellt."
 echo ""
 echo "WICHTIGER HINWEIS:"
-echo "Je nach Desktop-Umgebung musst du eventuell mit der rechten Maustaste auf die neue Verknüpfung klicken und 'Starten erlauben' (oder eine ähnliche Option) auswählen, damit sie funktioniert."
+echo "Je nach Desktop-Umgebung musst du eventuell mit der rechten Maustaste auf die neue Verknuepfung klicken und 'Starten erlauben' (oder eine aehnliche Option) auswaehlen, damit sie funktioniert."

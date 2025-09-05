@@ -4,7 +4,7 @@ import re
 from db.crawler_db_handler import CrawlerDBHandler
 
 def _normalize_ioc_value(ioc_value, ioc_type):
-    """Normalisiert den IOC-Wert (z.B. Kleinschreibung fuer Domains/E-Mails)."""
+    """Normalisiert den IOC-Wert"""
     if ioc_type in ["domain", "email"]:
         return ioc_value.lower()
     return ioc_value

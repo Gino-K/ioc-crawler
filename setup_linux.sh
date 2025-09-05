@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "=========================================================="
-echo " IOC Webcrawler - Setup für Linux"
+echo " IOC Webcrawler - Setup fuer Linux"
 echo "=========================================================="
 echo ""
 
@@ -17,7 +17,7 @@ fi
 echo "[1/8] Python 3 gefunden."
 echo ""
 
-echo "[2/8] Überprüfe auf venv-Abhängigkeit..."
+echo "[2/8] ueberpruefe auf venv-Abhaengigkeit..."
 if ! python3 -m venv --help &> /dev/null; then
     echo "     ...python3-venv nicht gefunden. Versuche automatische Installation."
     sudo apt update
@@ -31,7 +31,7 @@ fi
 echo "     ...Erfolgreich."
 echo ""
 
-echo "[3/8] Überprüfe auf GUI-Abhängigkeit (tkinter)..."
+echo "[3/8] ueberpruefe auf GUI-Abhaengigkeit (tkinter)..."
 if ! python3 -c "import tkinter" &> /dev/null; then
     echo "     ...tkinter nicht gefunden. Versuche automatische Installation (erfordert sudo-Passwort)."
     sudo apt update
@@ -59,23 +59,23 @@ source venv/bin/activate
 echo "     ...Erfolgreich."
 echo ""
 
-echo "[6/8] Installiere alle benötigten Bibliotheken aus requirements.txt..."
+echo "[6/8] Installiere alle benoetigten Bibliotheken aus requirements.txt..."
 echo "     Dies kann einen Moment dauern."
 pip install -r requirements.txt
 if [ $? -ne 0 ]; then
     echo "FEHLER beim Installieren der Bibliotheken."
-    echo "Bitte überprüfe die Internetverbindung und die requirements.txt."
+    echo "Bitte ueberpruefe die Internetverbindung und die requirements.txt."
     exit 1
 fi
 echo "     ...Alle Bibliotheken erfolgreich installiert."
 echo ""
 
-echo "[7/8] Mache benötigte Skripte ausführbar..."
+echo "[7/8] Mache benoetigte Skripte ausfuehrbar..."
 chmod +x run_crawler_lin.sh
 echo "     ...Erfolgreich."
 echo ""
 
-echo "[8/8] Erstelle Desktop-Verknüpfung..."
+echo "[8/8] Erstelle Desktop-Verknuepfung..."
 DESKTOP_FILE="$HOME/Desktop/ioc_crawler.desktop"
 PYTHON_EXE="$SCRIPT_DIR/venv/bin/python"
 
@@ -92,7 +92,7 @@ Categories=Utility;" > "$DESKTOP_FILE"
 
 chmod +x "$DESKTOP_FILE"
 
-echo "     ...Verknüpfung '$DESKTOP_FILE' erfolgreich erstellt."
+echo "     ...Verknuepfung '$DESKTOP_FILE' erfolgreich erstellt."
 echo ""
 
 deactivate
@@ -100,6 +100,6 @@ deactivate
 echo "=========================================================="
 echo " Setup abgeschlossen!"
 echo "=========================================================="
-echo "Du kannst die Anwendung jetzt über die neue Verknüpfung"
+echo "Du kannst die Anwendung jetzt ueber die neue Verknuepfung"
 echo "auf deinem Desktop starten."
 echo ""

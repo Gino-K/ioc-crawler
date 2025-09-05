@@ -98,10 +98,9 @@ class TestIOCExtractor(unittest.TestCase):
 
         texts = ["Text 1 mit ioc1", "Text 2 mit ioc2", ""]
 
-        # Simuliere die Rückgabewerte für jeden Aufruf
         mock_extract_iocs.side_effect = [
-            [{"ioc_value": "ioc1"}],  # Erster Aufruf
-            [{"ioc_value": "ioc2"}],  # Zweiter Aufruf
+            [{"ioc_value": "ioc1"}],
+            [{"ioc_value": "ioc2"}],
         ]
 
         results = extractor.process_text_contents(texts)

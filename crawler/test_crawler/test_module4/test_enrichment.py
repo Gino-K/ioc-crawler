@@ -7,7 +7,7 @@ FIXED_TIMESTAMP = datetime.datetime.fromisoformat("2025-06-01T12:00:00+00:00")
 
 
 class TestEnrichmentNormalizeIOCValue(unittest.TestCase):
-    """Testfälle für die _normalize_ioc_value Hilfsfunktion."""
+    """Testfaelle fuer die _normalize_ioc_value Hilfsfunktion."""
 
     def test_normalize_domain_lowercase(self):
         self.assertEqual(enrichment._normalize_ioc_value("EXAMPLE.COM", "domain"), "example.com")
@@ -20,7 +20,7 @@ class TestEnrichmentNormalizeIOCValue(unittest.TestCase):
 
 
 class TestEnrichmentAddUniqueMention(unittest.TestCase):
-    """Testfälle für die _add_unique_mention Hilfsfunktion."""
+    """Testfaelle fuer die _add_unique_mention Hilfsfunktion."""
 
     def test_add_new_mention(self):
         target_list, seen_set = [], set()
@@ -39,7 +39,7 @@ class TestEnrichmentAddUniqueMention(unittest.TestCase):
 
 @patch('crawler.module4.enrichment.datetime')
 class TestEnrichmentProcessAndStructureIOCs(unittest.TestCase):
-    """Testfälle für die Hauptfunktion process_and_structure_iocs."""
+    """Testfaelle fuer die Hauptfunktion process_and_structure_iocs."""
 
     def setUp(self):
         """Bereitet die Testdaten und Mocks vor."""
@@ -87,12 +87,10 @@ class TestEnrichmentProcessAndStructureIOCs(unittest.TestCase):
         print("\n[TEST] test_deduplication_and_merge")
         mock_datetime.datetime.now.return_value.replace.return_value = FIXED_TIMESTAMP
         module3_output = [
-            # Erster Fund von 1.1.1.1
             {"ioc_value": "1.1.1.1", "ioc_type": "ipv4", "source_article_index": 0,
              "context_snippet": "IP 1.1.1.1 in article 0."},
             {"ioc_value": "CVE-001", "ioc_type": "cve", "source_article_index": 0},
             {"ioc_value": "CountryA", "ioc_type": "country_mention", "source_article_index": 0},
-            # Zweiter Fund von 1.1.1.1
             {"ioc_value": "1.1.1.1", "ioc_type": "ipv4", "source_article_index": 1,
              "context_snippet": "IP 1.1.1.1 again."},
             {"ioc_value": "CVE-002", "ioc_type": "cve", "source_article_index": 1},
@@ -118,8 +116,8 @@ class TestEnrichmentProcessAndStructureIOCs(unittest.TestCase):
         self.assertEqual(ioc['occurrence_count'], 2)
         self.assertCountEqual(ioc['source_article_urls'],
                               [self.article_data_map['urls'][0], self.article_data_map['urls'][1]])
-        self.assertEqual(len(ioc['associated_cves']), 2)  # Beide CVEs wurden gemerged
-        self.assertEqual(len(ioc['associated_countries']), 1)  # Nur ein Land
+        self.assertEqual(len(ioc['associated_cves']), 2)
+        self.assertEqual(len(ioc['associated_countries']), 1)
 
 
 if __name__ == '__main__':
