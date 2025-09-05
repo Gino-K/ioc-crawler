@@ -79,5 +79,5 @@ class SearchView(customtkinter.CTkFrame):
                 cell.grid(row=row_index, column=col_index, padx=5, pady=3, sticky="ew")
 
                 cell.bind("<Button-1>", lambda event, ioc_id=ioc.id: self.controller.show_ioc_details(ioc_id))
-                cell.bind("<Enter>", lambda e, c=cell: c.configure(font=customtkinter.CTkFont(underline=True)))
-                cell.bind("<Leave>", lambda e, c=cell: c.configure(font=customtkinter.CTkFont(underline=False)))
+                cell.bind("<Enter>", lambda event, c=cell: c.configure(font=customtkinter.CTkFont(underline=True)))
+                cell.bind("<Leave>", lambda event, c=cell: c.configure(font=customtkinter.CTkFont(underline=False)))
