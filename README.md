@@ -1,60 +1,90 @@
-# Setup
+# IOC Webcrawler
 
-## Erstellen der Desktop-Verknüpfung (Windows)
+Ein Tool zur automatisierten Extraktion von **Indicators of Compromise (IOCs)** aus Online-Quellen zur Beschleunigung von Cyber Threat Intelligence (CTI) Workflows.
 
-Um die Anwendung einfach zu starten, kannst du eine Desktop-Verknüpfung erstellen, die das Programm mit den richtigen Einstellungen ausführt.
+![Dashboard Screenshot](./assets/dashboard.png)
 
-1.  **PowerShell als Administrator öffnen:**
-    * Öffne das Windows-Startmenü, tippe `PowerShell`, mache einen Rechtsklick auf "Windows PowerShell" und wähle "Als Administrator ausführen".
+---
 
-2.  **Ausführungsrichtlinie einmalig anpassen (falls nötig):**
-    * Führe den folgenden Befehl in der Admin-PowerShell aus. Dies erlaubt das Ausführen von lokal erstellten Skripten.
-      ```powershell
-      Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
-      ```
+## Über das Projekt
 
-3.  **Skript ausführen:**
-    * Navigiere in der PowerShell zum Hauptverzeichnis dieses Projekts.
-      ```powershell
-      cd "C:\Pfad\zum\Webcrawler"
-      ```
-    * Führe das Setup-Skript aus:
-      ```powershell
-      .\create_desktop_shortcut_win.ps1
-      ```
+Im Bereich der Cyber Threat Intelligence ist die manuelle Sammlung von Bedrohungsinformationen einer der größten Engpässe. Sicherheitsanalysten verbringen Stunden damit, Fachartikel und Blogs zu durchsuchen, um relevante Indicators of Compromise (IP-Adressen, Domains, Hashes etc.) zu finden. Dieser Prozess ist nicht nur **zeitintensiv und repetitiv**, sondern auch **fehleranfällig und unvollständig**.
 
-4.  **Verknüpfung für Admin-Rechte konfigurieren:**
-    * Nach dem Ausführen des Skripts hast du eine neue "IOC Crawler"-Verknüpfung auf deinem Desktop.
-    * Mache einen Rechtsklick auf diese Verknüpfung -> **Eigenschaften**.
-    * Gehe zum Tab "Verknüpfung" -> **Erweitert...** -> Setze den Haken bei **"Als Administrator ausführen"**.
+Dieses Projekt wurde entwickelt, um diesen Prozess vollständig zu **automatisieren**. Der IOC Webcrawler ermöglicht es Analysten, sich auf ihre Kernkompetenz zu konzentrieren - die Analyse und Interpretation von Daten -, anstatt ihre Zeit mit der manuellen Datensammlung zu verbringen.
 
-Fertig! Du kannst die Anwendung jetzt immer über diese Verknüpfung starten.
+---
 
-## Erstellen der Desktop-Verknüpfung (Linux)
+## Features
 
-Um die Anwendung einfach über den Desktop zu starten, kannst du ein Shell-Skript ausführen, das eine `.desktop`-Verknüpfung erstellt.
+* **Konfigurierbare Datenquellen:** Verwalte eine Liste von Nachrichten-Websites und Blogs direkt über die GUI.
+* **Blacklist-Filter:** Schließe irrelevante Artikel automatisch aus, indem du eine Blacklist mit Schlüsselwörtern pflegst.
+* **Automatisierte & Manuelle Scans:** Starte den Crawler per Knopfdruck oder plane regelmäßige, automatisierte Läufe (Windows & Linux).
+* **Interaktives Dashboard:** Visualisiere aggregierte Daten und Trends, z. B. IOCs pro Monat, Top-Quellen und Korrelationen mit APT-Gruppen.
+* **Leistungsstarke Suche & Analyse:** Durchsuche die gesamte IOC-Datenbank, filtere nach Typ/Wert und analysiere den Fundkontext in einer Detailansicht.
+* **False-Positive-Management:** Markiere Fehlfunde, um sie aus der Datenbank zu entfernen und für zukünftige Scans auf eine Whitelist zu setzen.
+* **Standardisierter Export:** Exportiere die gesammelten Daten in gängige Formate wie **JSON**, **CSV** und den CTI-Standard **STIX 2.1**.
+* **Plattformunabhängig:** Läuft unter Windows und gängigen Linux-Distributionen (getestet mit Kali & Ubuntu).
 
-1.  **Terminal öffnen:**
-    * Öffne ein Terminal-Fenster.
+---
 
-2.  **Skript ausführbar machen:**
-    * Navigiere zum Hauptverzeichnis dieses Projekts.
-      ```bash
-      cd /pfad/zu/deinem/Webcrawler
-      ```
-    * Mache das Setup-Skript mit dem folgenden Befehl ausführbar:
-      ```bash
-      chmod +x create_shortcut.sh
-      ```
+## Tech Stack
 
-3.  **Skript ausführen:**
-    * Führe das Skript aus:
-      ```bash
-      ./create_shortcut.sh
-      ```
+* **Backend:** Python 3
+* **Datenbank:** SQLite mit SQLAlchemy (ORM)
+* **GUI:** CustomTkinter
+* **Parallelisierung:** `concurrent.futures` (`ThreadPoolExecutor`)
+* **Automatisierung:** Interaktion mit Windows Task Scheduler (`schtasks.exe`) & Linux Cron (`crontab`)
 
-4.  **Verknüpfung vertrauen (falls nötig):**
-    * Nach dem Ausführen des Skripts hast du eine neue "IOC Crawler"-Verknüpfung auf deinem Desktop.
-    * Bei den meisten modernen Linux-Desktops musst du diese neue Verknüpfung als vertrauenswürdig markieren. Mache einen **Rechtsklick** darauf und wähle **"Starten erlauben"** (oder eine ähnliche Option).
+---
 
-Fertig! Du kannst die Anwendung jetzt immer über diese Verknüpfung starten. Admin-Rechte werden unter Linux anders gehandhabt; die Anwendung sollte bei Bedarf (z.B. zum Einrichten eines Cron-Jobs) nach deinem Passwort fragen.
+## Getting Started
+
+Um eine lauffähige Kopie des Projekts zu erhalten, folge diesen Schritten.
+
+### Voraussetzungen
+
+* Python 3.8 oder höher
+* `git` zum Klonen des Repositories
+
+### Installation
+
+Für eine einfache und saubere Installation wurden plattformspezifische Setup-Skripte erstellt.
+
+#### **Windows**
+
+1.  **Repository klonen:**
+    ```bash
+    git clone [https://github.com/dein-username/dein-repo.git](https://github.com/dein-username/dein-repo.git)
+    cd dein-repo
+    ```
+2.  **Setup als Administrator ausführen:**
+    * Mache einen Rechtsklick auf die Datei `setup_windows.bat` und wähle **"Als Administrator ausführen"**.
+    * Das Skript richtet eine virtuelle Umgebung ein, installiert alle Pakete und legt eine Verknüpfung auf dem Desktop ab.
+3.  **Verknüpfung für Admin-Rechte konfigurieren:**
+    * Mache einen Rechtsklick auf die neue "IOC Crawler"-Verknüpfung → **Eigenschaften** → Tab "Verknüpfung" → **Erweitert...** → Haken bei **"Als Administrator ausführen"** setzen. Dies ist für die Planung von Tasks notwendig.
+
+#### **Linux (Kali)**
+
+1.  **Repository klonen:**
+    ```bash
+    git clone [https://github.com/dein-username/dein-repo.git](https://github.com/dein-username/dein-repo.git)
+    cd dein-repo
+    ```
+2.  **Setup-Skript ausführen:**
+    ```bash
+    # Skript ausführbar machen
+    chmod +x setup_linux.sh
+
+    # Setup ausführen
+    ./setup_linux.sh
+    ```
+    * Das Skript wird dich ggf. nach deinem `sudo`-Passwort fragen, um `python3-venv` und `python3-tk` zu installieren.
+3.  **Verknüpfung vertrauen:**
+    * Nach der Installation musst du eventuell auf die neue Desktop-Verknüpfung rechtsklicken und **"Starten erlauben"** (o.ä.) auswählen.
+
+
+---
+
+## Kontakt
+
+Gino Kettler - [linkedin.profil](https://www.linkedin.com/in/gino-k-3117b0317/)
