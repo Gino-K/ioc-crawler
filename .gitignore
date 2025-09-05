@@ -16,3 +16,5 @@ settings.json
 
 .DS_Store # macOS
 Thumbs.db
+
+crawler_log

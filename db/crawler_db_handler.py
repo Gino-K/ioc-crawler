@@ -59,7 +59,7 @@ class CrawlerDBHandler(DatabaseHandlerBase):
             print("[DB Handler] Pre-Loading der Laender erfolgreich abgeschlossen.")
 
     def find_or_create_apt(self, session, apt_info):
-        mention_name = apt_info["value"]
+        mention_name = apt_info["ioc_value"]
         search_key = _normalize_name(mention_name)
         if not search_key: return None
 
@@ -86,9 +86,9 @@ class CrawlerDBHandler(DatabaseHandlerBase):
 
                 apt_db_objects = [self.find_or_create_apt(session, apt_info) for apt_info in
                                   ioc_data.get("associated_apts", [])]
-                country_db_objects = [self.find_country(session, c['value']) for c in
+                country_db_objects = [self.find_country(session, c['ioc_value']) for c in
                                       ioc_data.get("associated_countries", [])]
-                cve_db_objects = [self._get_or_create(session, CVE, name=cve['value']) for cve in
+                cve_db_objects = [self._get_or_create(session, CVE, name=cve['ioc_value']) for cve in
                                   ioc_data.get("associated_cves", [])]
 
                 for url in ioc_data.get("source_article_urls", []):

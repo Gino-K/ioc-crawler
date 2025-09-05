@@ -98,21 +98,24 @@ def process_and_structure_iocs(annotated_iocs_from_module3: list,
 
                 entry = unique_processed_iocs[ioc_key]
                 for cve in nearby_cves:
-                    _add_unique_mention(entry['associated_cves'], entry['_seen_cve_values_for_ioc'], cve, ('value',))
+                    cve['value'] = cve['ioc_value']
+                    _add_unique_mention(entry['associated_cves'], entry['_seen_cve_values_for_ioc'], cve, ('ioc_value',))
 
                 for country in nearby_countries:
-                    country_db = db_handler.find_country(session, country['value'])
+                    country_db = db_handler.find_country(session, country['ioc_value'])
                     if country_db:
                         country['iso2_code'] = country_db.iso2_code
+                    country['value'] = country['ioc_value']
                     _add_unique_mention(entry['associated_countries'], entry['_seen_country_values_for_ioc'], country,
-                                        ('value',))
+                                        ('ioc_value',))
 
                 for apt in nearby_apts:
                     apt_db = db_handler.find_or_create_apt(session, apt)
                     if apt_db:
                         apt['description'] = apt_db.description
+                    apt['value'] = apt['ioc_value']
                     _add_unique_mention(entry['associated_apts'], entry['_seen_apt_values_for_ioc'], apt,
-                                        ('value', 'normalized_value'))
+                                        ('ioc_value', 'normalized_value'))
 
     final_list_of_iocs = []
     for ioc_data_dict in unique_processed_iocs.values():

@@ -4,9 +4,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from db.database_models import Base, APT
-from db.database_handler import DatabaseHandler
+from db.crawler_db_handler import CrawlerDBHandler
 
-from extraScripts.loaddb import preload_mitre_apts
+from extraScripts import preload_manager as preload_mitre_apts
 
 SAMPLE_HTML = """
 <html><body>
@@ -29,7 +29,6 @@ SAMPLE_HTML = """
 </body></html>
 """
 
-# HTML für einen Update-Test
 SAMPLE_HTML_UPDATE = """
 <html><body>
     <table>
@@ -58,9 +57,8 @@ class TestPreloadMitreApts(unittest.TestCase):
         """Räumt nach jedem Test auf."""
         Base.metadata.drop_all(self.engine)
 
-    @patch('extraScripts.loaddb.preload_mitre_apts.DatabaseHandler')
-    @patch('extraScripts.loaddb.preload_mitre_apts.requests.get')
-    def test_scrape_and_load_apts(self, mock_requests_get, mock_db_handler):
+    @patch('requests.get')
+    def test_scrape_and_load_apts(self, mock_requests_get):
         """Testet das erfolgreiche Scrapen und Speichern der APT-Gruppen."""
         print("\n[TEST] test_scrape_and_load_apts")
 
@@ -69,35 +67,37 @@ class TestPreloadMitreApts(unittest.TestCase):
         mock_response.content = SAMPLE_HTML.encode('utf-8')
         mock_requests_get.return_value = mock_response
 
-        test_db_handler_instance = DatabaseHandler(db_name=":memory:")
+        test_db_handler_instance = CrawlerDBHandler(db_name=":memory:")
         test_db_handler_instance.Session = self.TestingSessionLocal
-        mock_db_handler.return_value = test_db_handler_instance
 
-        preload_mitre_apts.scrape_and_load_apts()
+        mitre_preloader = preload_mitre_apts.MitreAptPreloader(test_db_handler_instance)
 
-        session = self.TestingSessionLocal()
-        apt_count = session.query(APT).count()
-        self.assertEqual(apt_count, 2)
+        mitre_preloader.run()
 
-        apt_ajax = session.query(APT).filter_by(mitre_id="G0130").one()
-        self.assertEqual(apt_ajax.name, "Ajax Security Team")
-        self.assertEqual(apt_ajax.aliases, "Rocket Kitten, Flying Kitten")
-        self.assertEqual(apt_ajax.description, "Ajax Security Team is a group active since 2010.")
+        with self.TestingSessionLocal() as session:
+            apt_count = session.query(APT).count()
+            self.assertEqual(apt_count, 2)
 
-        session.close()
+            apt_ajax = session.query(APT).filter_by(mitre_id="G0130").one()
+            self.assertEqual(apt_ajax.name, "Ajax Security Team")
+            self.assertEqual(apt_ajax.aliases, "Rocket Kitten, Flying Kitten")
+            self.assertEqual(apt_ajax.description, "Ajax Security Team is a group active since 2010.")
 
-        # ----- Teste das Update-Szenario -----
         print("[TEST] test_scrape_and_load_apts (Update-Szenario)")
         mock_response.content = SAMPLE_HTML_UPDATE.encode('utf-8')
         mock_requests_get.return_value = mock_response
 
-        preload_mitre_apts.scrape_and_load_apts()
+        mitre_preloader.run()
 
-        session = self.TestingSessionLocal()
-        apt_count_after_update = session.query(APT).count()
-        self.assertEqual(apt_count_after_update, 2)
+        with self.TestingSessionLocal() as session:
+            apt_count_after_update = session.query(APT).count()
+            self.assertEqual(apt_count_after_update, 2)  # Darf nicht mehr werden
 
-        apt_ajax_updated = session.query(APT).filter_by(mitre_id="G0130").one()
-        self.assertEqual(apt_ajax_updated.aliases, "Rocket Kitten, Flying Kitten, Operation Saffron Rose")
-        self.assertEqual(apt_ajax_updated.description, "This is an updated description.")
-        session.close()
+            apt_ajax_updated = session.query(APT).filter_by(mitre_id="G0130").one()
+            self.assertEqual(apt_ajax_updated.aliases, "Rocket Kitten, Flying Kitten, Operation Saffron Rose")
+            self.assertEqual(apt_ajax_updated.description, "This is an updated description.")
+
+
+if __name__ == '__main__':
+    unittest.main()
+

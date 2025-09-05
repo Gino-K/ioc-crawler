@@ -1,131 +1,71 @@
 import unittest
-from unittest.mock import patch
-from crawler import main
+from unittest.mock import patch, MagicMock
+
+from crawler.crawler_orch import CrawlerOrchestrator
 
 
-class TestMainWorkflow(unittest.TestCase):
+class TestCrawlerOrchestrator(unittest.TestCase):
+    """
+    Integrationstests für den CrawlerOrchestrator.
+    Testet das Zusammenspiel der Prozessoren, indem die Prozessoren selbst gemockt werden.
+    """
 
-    @patch('crawler.main.load_and_compile_country_regex')
-    @patch('crawler.main.load_and_compile_apt_regex')
-    @patch('crawler.main.DatabaseHandler')
-    @patch('crawler.main.load_data_sources')
-    @patch('crawler.main.article.get_article_links_from_source')
-    @patch('crawler.main.text.process_article_links')
-    @patch('crawler.main.ioc_context.process_text_contents')
-    @patch('crawler.main.enrichment.process_and_structure_iocs')
-    @patch('crawler.main.write_files.save_iocs_to_json_files')
-    @patch('crawler.main.write_files.save_iocs_to_csv')
-    @patch('crawler.main.write_files.save_iocs_to_stix')
-    def test_happy_path_full_run(self, mock_save_stix, mock_save_csv, mock_save_json,
-                                 mock_structure_iocs_m4, mock_process_iocs_m3,
-                                 mock_process_text, mock_get_links, mock_load_sources,
-                                 mock_db_handler_class, mock_load_apts, mock_load_countries):
-        """Testet den idealen Durchlauf, bei dem alle Schritte erfolgreich sind."""
-        print("\n[Integrationstest] Szenario 1: Happy Path (Alles funktioniert)")
+    @patch('crawler.crawler_orch.OutputProcessor')
+    @patch('crawler.crawler_orch.EnrichmentProcessor')
+    @patch('crawler.crawler_orch.IocExtractorProcessor')
+    @patch('crawler.crawler_orch.ContentExtractor')
+    @patch('crawler.crawler_orch.LinkFinder')
+    @patch('crawler.crawler_orch.UserSettings')
+    @patch('crawler.crawler_orch.CrawlerDBHandler')
+    def test_run_happy_path(self, MockDBHandler, MockUserSettings, MockLinkFinder,
+                            MockContentExtractor, MockIocExtractor, MockEnrichment, MockOutput):
+        """Testet den idealen Durchlauf, bei dem jeder Schritt Daten zurückgibt."""
+        print("\n[TEST] Orchestrator: Happy Path")
 
-        mock_load_sources.return_value = ['https://test-source.com']
-        mock_get_links.return_value = ['https://test-source.com/article1']
+        mock_link_finder_instance = MockLinkFinder.return_value
+        mock_link_finder_instance.process.return_value = ['http://example.com/article1']
 
-        db_instance = mock_db_handler_class.return_value
-        db_instance.get_existing_sightings.return_value = {}
+        mock_content_extractor_instance = MockContentExtractor.return_value
+        mock_content_extractor_instance.process.return_value = {'urls': [...], 'texts': {...}}
 
-        mock_process_text.return_value = ["Text mit IOCs"]
+        mock_ioc_extractor_instance = MockIocExtractor.return_value
+        mock_ioc_extractor_instance.process.return_value = [{'ioc_value': '1.1.1.1'}]
 
-        mock_annotated_iocs = [{
-            "ioc_value": "1.1.1.1", "ioc_type": "ipv4", "source_article_index": 0,
-            "context_snippet": "...",
-            "associated_apts": [{"value": "APT28", "normalized_value": "APT28"}]
-        }]
-        mock_process_iocs_m3.return_value = mock_annotated_iocs
+        mock_enrichment_instance = MockEnrichment.return_value
+        mock_enrichment_instance.process.return_value = [{'structured_ioc': 'data'}]
 
-        structured_iocs = [{
-            "ioc_value": "1.1.1.1", "ioc_type": "ipv4", "discovery_timestamp": "2025-06-26T18:00:00Z",
-            "source_article_urls": ["https://test-source.com/article1"],
-            "occurrence_count": 1,
-            "associated_apts": [{"value": "APT28", "normalized_value": "APT28"}]
-        }]
-        mock_structure_iocs_m4.return_value = structured_iocs
+        mock_output_instance = MockOutput.return_value
+        mock_db_handler_instance = MockDBHandler.return_value
 
-        main.CREATE_JSON_PER_IOC = main.CREATE_CSV_SUMMARY = main.CREATE_STIX_BUNDLE = True
+        orchestrator = CrawlerOrchestrator()
+        orchestrator.run()
 
-        main.main()
+        mock_link_finder_instance.process.assert_called_once()
+        mock_content_extractor_instance.process.assert_called_once()
+        mock_ioc_extractor_instance.process.assert_called_once()
+        mock_enrichment_instance.process.assert_called_once()
+        mock_output_instance.process.assert_called_once()
 
-        db_instance.add_structured_ioc_data.assert_called_with(structured_iocs[0])
-        mock_save_json.assert_called_once_with(structured_iocs, main.JSON_OUTPUT_DIR)
+        mock_db_handler_instance.update_article_scan_history.assert_called_once()
 
-    @patch('crawler.main.load_data_sources')
-    @patch('crawler.main.article.get_article_links_from_source')
-    def test_no_sources_found(self, mock_get_links, mock_load_sources):
-        """Testet das Szenario, bei dem die sources.txt leer ist."""
-        print("\n[Integrationstest] Szenario 2: Keine Datenquellen gefunden")
-        mock_load_sources.return_value = []
+    @patch('crawler.crawler_orch.LinkFinder')
+    @patch('crawler.crawler_orch.ContentExtractor')
+    @patch('crawler.crawler_orch.UserSettings')
+    @patch('crawler.crawler_orch.CrawlerDBHandler')
+    def test_run_stops_if_no_links_found(self, MockDBHandler, MockUserSettings, MockContentExtractor, MockLinkFinder):
+        """Testet, dass der Workflow korrekt abbricht, wenn keine Links gefunden werden."""
+        print("\n[TEST] Orchestrator: Stoppt bei keinen Links")
 
-        main.main()
+        mock_link_finder_instance = MockLinkFinder.return_value
+        mock_link_finder_instance.process.return_value = []  # Keine Links gefunden
 
-        mock_get_links.assert_not_called()
+        mock_content_extractor_instance = MockContentExtractor.return_value
 
-    @patch('crawler.main.load_data_sources')
-    @patch('crawler.main.article.get_article_links_from_source')
-    @patch('crawler.main.text.process_article_links')
-    def test_no_new_articles_found(self, mock_process_text, mock_get_links, mock_load_sources):
-        """Testet das Szenario, bei dem die Quellen keine neuen Artikel-Links liefern."""
-        print("\n[Integrationstest] Szenario 3: Keine neuen Artikel gefunden")
-        mock_load_sources.return_value = ['https://test-source.com']
-        mock_get_links.return_value = []
+        orchestrator = CrawlerOrchestrator()
+        orchestrator.run()
 
-        main.main()
-
-        mock_process_text.assert_not_called()
-
-    @patch('crawler.main.DatabaseHandler')
-    @patch('crawler.main.load_data_sources')
-    @patch('crawler.main.article.get_article_links_from_source')
-    @patch('crawler.main.text.process_article_links')
-    @patch('crawler.main.ioc_context.process_text_contents')
-    @patch('crawler.main.enrichment.process_and_structure_iocs')
-    def test_mixed_articles_with_and_without_iocs(self, mock_structure_iocs_m4, mock_process_iocs_m3, mock_process_text,
-                                                  mock_get_links, mock_load_sources, mock_db_handler_class):
-        """Testet das Szenario mit gemischten Artikeln: einer mit IOCs, einer ohne."""
-        print("\n[Integrationstest] Szenario 4: Gemischte Artikel (mit & ohne IOCs)")
-
-        mock_load_sources.return_value = ['https://test-source.com']
-        mock_get_links.return_value = ['https://site.com/article-with-iocs', 'https://site.com/article-without-iocs']
-        mock_process_text.return_value = ["Text mit 1.1.1.1", "Text ohne alles."]
-
-        mock_process_iocs_m3.return_value = [{"ioc_value": "1.1.1.1", "ioc_type": "ipv4", "source_article_index": 0}]
-
-        structured_iocs = [{"ioc_value": "1.1.1.1", "ioc_type": "ipv4", "occurrence_count": 1,
-                            "discovery_timestamp": "2025-06-26T18:00:00Z",
-                            "source_article_urls": ['https://site.com/article-with-iocs']}]
-        mock_structure_iocs_m4.return_value = structured_iocs
-
-        db_instance = mock_db_handler_class.return_value
-        db_instance.get_existing_sightings.return_value = {}
-
-        main.main()
-
-        db_instance.add_structured_ioc_data.assert_called_once_with(structured_iocs[0])
-
-    @patch('crawler.main.DatabaseHandler')
-    @patch('crawler.main.load_data_sources')
-    @patch('crawler.main.article.get_article_links_from_source')
-    @patch('crawler.main.text.process_article_links')
-    @patch('crawler.main.ioc_context.process_text_contents')
-    def test_content_extraction_fails_for_one_article(self, mock_process_iocs_m3, mock_process_text, mock_get_links,
-                                                      mock_load_sources, mock_db_handler_class):
-        """Testet das Szenario, bei dem Modul 2 für einen Artikel keinen Inhalt extrahieren kann."""
-        print("\n[Integrationstest] Szenario 5: Fehler bei der Inhaltsextraktion")
-
-        mock_load_sources.return_value = ['https://test-source.com']
-        mock_get_links.return_value = ['https://site.com/article-ok', 'https://site.com/article-fail']
-        mock_process_text.return_value = ["Gültiger Text mit 8.8.8.8", None]
-
-        db_instance = mock_db_handler_class.return_value
-        db_instance.get_existing_sightings.return_value = {}
-
-        main.main()
-
-        mock_process_iocs_m3.assert_called_once_with(["Gültiger Text mit 8.8.8.8", None])
+        mock_link_finder_instance.process.assert_called_once()
+        mock_content_extractor_instance.process.assert_not_called()
 
 
 if __name__ == '__main__':

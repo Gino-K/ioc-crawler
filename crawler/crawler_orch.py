@@ -47,7 +47,15 @@ class CrawlerOrchestrator:
         # Module 5: Ergebnisse speichern
         self.output_processor.process(structured_iocs)
 
+        print("\n[Main] Aktualisiere den Scan-Verlauf in der Datenbank...")
+        self.db_handler.update_article_scan_history(links_to_process)
+        print("[Main] Scan-Verlauf erfolgreich aktualisiert.")
+
         duration = time.perf_counter() - start_time
         print("\n==================================================")
         print(f"[Main] Gesamter Prozess abgeschlossen in {duration:.2f} Sekunden.")
         print("==================================================")
+
+if __name__ == "__main__":
+    orchestrator = CrawlerOrchestrator()
+    orchestrator.run()

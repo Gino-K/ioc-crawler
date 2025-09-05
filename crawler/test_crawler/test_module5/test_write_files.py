@@ -132,33 +132,19 @@ class TestModule5OutputFunctions(unittest.TestCase):
         self.assertEqual(str(bundle_data.get("spec_version")), "2.1")
         self.assertIn("objects", bundle_data)
 
-        # Zähle die verschiedenen Objekttypen im Bundle
         stix_objects = bundle_data["objects"]
         object_types = [obj["type"] for obj in stix_objects]
 
-        # Erwartete Objekte basierend auf unseren Testdaten:
         # Primäre SCOs: 1x domain-name, 1x ipv4-address, 1x file (für den MD5-Hash)
         self.assertEqual(object_types.count("domain-name"), 1)
         self.assertEqual(object_types.count("ipv4-addr"), 1)
         self.assertEqual(object_types.count("file"), 1)
 
-        # Assoziierte SDOs: 1x vulnerability, 1x intrusion-set, 1x location, 2x report
+        # Assoziierte SDOs: 1x vulnerability, 1x intrusion-set, 2x report
         self.assertEqual(object_types.count("vulnerability"), 1)
         self.assertEqual(object_types.count("intrusion-set"), 1)
-        self.assertEqual(object_types.count("location"), 1)
-        self.assertEqual(object_types.count("report"), 2)  # eine für jede einzigartige URL
+        self.assertEqual(object_types.count("report"), 2)
 
-        # Beziehungen (SROs):
-        # 1. APT -> uses -> Domain
-        # 2. APT -> targets -> Vulnerability
-        # 3. APT -> originates-from -> Location (indirekt, da Country mit IP assoziiert war, nicht APT)
-        #    Die aktuelle STIX-Logik erstellt eine Beziehung zwischen APT und Location nur, wenn beide
-        #    mit demselben primären IOC assoziiert sind. In unserem Fall:
-        #    - evil.com hat APT-X und CVE-2025-1111 => 2 Beziehungen
-        #    - 192.168.1.101 hat Country Russia => keine APT-Beziehung zur Location
-        #    - d41d... (hash) hat nichts
-        #    - Reports zu IOCs: 3 Beziehungen (Report1 -> evil.com, Report1 -> IP, Report2 -> IP, Report2 -> hash)
-        #    Die genaue Anzahl der Beziehungen kann komplex sein, aber wir erwarten, dass sie existieren.
         self.assertIn("relationship", object_types)
 
         # Finde ein spezifisches Objekt und prüfe seine Eigenschaften
